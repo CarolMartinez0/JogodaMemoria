@@ -1,26 +1,23 @@
 <template>
   <div id="app">
-    <StartScreen 
-      v-if="!jogoIniciado" 
-      @start-game="startGame" 
-    />
-    <GameBoard 
-      v-else 
-      :imagens="imagens" 
-      :dificuldade="dificuldade"
-      @go-back="voltarMenu"
-    />
+    <transition name="page" mode="out-in">
+      <StorySlideshow v-if="exibindoIntro" @close-intro="exibindoIntro = false" key="slideshow" />
+      <StartScreen v-else-if="!jogoIniciado" @start-game="startGame" @open-intro="exibindoIntro = true" key="start" />
+      <GameBoard v-else :imagens="imagens" :dificuldade="dificuldade" @go-back="voltarMenu" key="game" />
+    </transition>
   </div>
 </template>
 
 <script>
 import StartScreen from './components/StartScreen.vue';
 import GameBoard from './components/GameBoard.vue';
+import StorySlideshow from './components/StorySlideshow.vue';
 
 export default {
-  components: { StartScreen, GameBoard },
+  components: { StartScreen, GameBoard, StorySlideshow },
   data() {
     return {
+      exibindoIntro: false,
       jogoIniciado: false,
       dificuldade: 'facil',
       imagens: [
@@ -70,9 +67,25 @@ export default {
 }
 /* Aplicar a fonte globalmente */
 body, #app {
-  font-family: 'Evogria', sans-serif;
+  font-family: var(--font-evogria);
   margin: 0;
   padding: 0;
+}
+
+/* Transições de página */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
 }
 </style>
 

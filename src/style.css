@@ -11,6 +11,10 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Variáveis CSS */
+  --gradient-pink-purple: linear-gradient(to bottom, #ff69b4, #8a2be2);
+  --font-evogria: 'Evogria', sans-serif;
 }
 
 a {
