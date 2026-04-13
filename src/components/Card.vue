@@ -1,15 +1,25 @@
 <template>
   <div class="card" :class="{ flipped: carta.virada || carta.encontrada }" @click="$emit('click')">
-    <div class="front">
-      <img :src="carta.imagem" alt="Carta" />
+    <div class="front" :class="{ 'text-card': isTextCard }">
+      <img v-if="!isTextCard" :src="carta.imagem" alt="Foto da mulher" />
+      <div v-else class="text">
+        <div class="name">{{ carta.name }}</div>
+        <div class="importance">{{ carta.importance }}</div>
+      </div>
     </div>
-    <div class="back">?</div>
+    <div class="back"></div>
   </div>
 </template>
 
 <script>
 export default {
-  props: ["carta"]
+  props: ["carta"],
+  computed: {
+    isTextCard() {
+      const textCards = ['2.png', '4.png', '6.png', '8.png', '10.png', '12.png', '14.png', '16.png', '18.png', '20.png'];
+      return textCards.some(png => this.carta.imagem.includes(png));
+    }
+  }
 };
 </script>
 
@@ -51,9 +61,30 @@ export default {
   transform: rotateY(180deg);
 }
 
+.card .front.text-card {
+  background: #fe47ac; /* light pink */
+  color: white;
+  padding: 5px;
+  box-sizing: border-box;
+  font-family: 'Evogria', sans-serif;
+  font-size: 0.8rem;
+  text-align: center;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.card .front.text-card .name {
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.card .front.text-card .importance {
+  font-size: 0.7rem;
+}
+
 .card .back {
   background: #050125;
-  font-size: 3rem;
 }
 
 .card.flipped .front {
@@ -70,6 +101,27 @@ export default {
   object-fit: cover;
 
   will-change: transform; /* Suaviza animação de imagem */
+}
+
+/* Ajustes para telas maiores */
+@media (min-width: 600px) {
+  .card .front.text-card {
+    font-size: 1rem;
+    padding: 8px;
+  }
+  .card .front.text-card .importance {
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 1000px) {
+  .card .front.text-card {
+    font-size: 1.2rem;
+    padding: 10px;
+  }
+  .card .front.text-card .importance {
+    font-size: 1.1rem;
+  }
 }
 </style>
 

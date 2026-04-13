@@ -1,0 +1,62 @@
+[
+  {
+    "nome": "Ada Lovelace",
+    "foto": "/img/ElasTI/1.png",
+    "historia": "Criou o primeiro algoritmo para uma máquina antes mesmo de os computadores existirem.",
+    "importancia": "É considerada a primeira programadora da história."
+  },
+  {
+    "nome": "Grace Hopper",
+    "foto": "/img/ElasTI/3.png",
+    "historia": "Desenvolveu o primeiro compilador e teve papel essencial na criação da linguagem COBOL.",
+    "importancia": "Contribuiu para o avanço da programação e linguagens de computador."
+  },
+  {
+    "nome": "Margaret Hamilton",
+    "foto": "/img/ElasTI/5.png",
+    "historia": "Criou o software das missões Apollo e cunhou o termo \"engenharia de software\".",
+    "importancia": "Fundamentou a engenharia de software moderna."
+  },
+  {
+    "nome": "Frances Allen",
+    "foto": "/img/ElasTI/7.png",
+    "historia": "Revolucionou a otimização de compiladores e foi a primeira mulher a ganhar o Prêmio Turing.",
+    "importancia": "Avançou a compilação e otimização de código."
+  },
+  {
+    "nome": "Barbara Liskov",
+    "foto": "/img/ElasTI/9.png",
+    "historia": "Criou fundamentos para a organização de grandes programas, também laureada com o Turing.",
+    "importancia": "Influenciou a programação orientada a objetos e design de software."
+  },
+  {
+    "nome": "Lynn Conway",
+    "foto": "/img/ElasTI/11.png",
+    "historia": "Pioneira no design de microchips, seu trabalho possibilitou dispositivos menores e mais potentes.",
+    "importancia": "Revolucionou o design de VLSI e computação moderna."
+  },
+  {
+    "nome": "Radia Perlman",
+    "foto": "/img/ElasTI/13.png",
+    "historia": "Inventou o protocolo STP, fundamental para o funcionamento da internet.",
+    "importancia": "Essencial para a rede e conectividade global."
+  },
+  {
+    "nome": "Karen Spärck Jones",
+    "foto": "/img/ElasTI/15.png",
+    "historia": "Criou conceitos essenciais para buscas inteligentes na internet, como o IDF.",
+    "importancia": "Baseou a recuperação de informação e motores de busca."
+  },
+  {
+    "nome": "Shafi Goldwasser",
+    "foto": "/img/ElasTI/17.png",
+    "historia": "Referência mundial em criptografia e segurança da informação.",
+    "importancia": "Avançou a criptografia e protocolos de segurança."
+  },
+  {
+    "nome": "Fei-Fei Li",
+    "foto": "/img/ElasTI/19.png",
+    "historia": "Liderou o projeto ImageNet e ajudou a ensinar computadores a \"enxergarem\" imagens, impactando a inteligência artificial.",
+    "importancia": "Impulsionou o aprendizado de máquina e visão computacional."
+  }
+]
