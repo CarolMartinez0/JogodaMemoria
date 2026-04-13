@@ -1,9 +1,30 @@
 <template>
   <div id="app">
     <transition name="page" mode="out-in">
-      <StorySlideshow v-if="exibindoIntro" @close-intro="exibindoIntro = false" key="slideshow" />
-      <StartScreen v-else-if="!jogoIniciado" @start-game="startGame" @open-intro="exibindoIntro = true" key="start" />
-      <GameBoard v-else :imagens="imagens" :dificuldade="dificuldade" @go-back="voltarMenu" key="game" />
+      <RegistrationScreen
+        v-if="!cadastroCompleto"
+        @registered="handleUserRegistered"
+        :escolas="escolas"
+        key="registration"
+      />
+      <StorySlideshow
+        v-else-if="exibindoIntro"
+        @close-intro="exibindoIntro = false"
+        key="slideshow"
+      />
+      <StartScreen
+        v-else-if="!jogoIniciado"
+        @start-game="startGame"
+        @open-intro="exibindoIntro = true"
+        key="start"
+      />
+      <GameBoard
+        v-else
+        :imagens="imagens"
+        :dificuldade="dificuldade"
+        @go-back="voltarMenu"
+        key="game"
+      />
     </transition>
   </div>
 </template>
@@ -12,11 +33,14 @@
 import StartScreen from './components/StartScreen.vue';
 import GameBoard from './components/GameBoard.vue';
 import StorySlideshow from './components/StorySlideshow.vue';
+import RegistrationScreen from './components/RegistrationScreen.vue';
 
 export default {
-  components: { StartScreen, GameBoard, StorySlideshow },
+  components: { StartScreen, GameBoard, StorySlideshow, RegistrationScreen },
   data() {
     return {
+      cadastroCompleto: false,
+      usuario: null,
       exibindoIntro: false,
       jogoIniciado: false,
       dificuldade: 'facil',
@@ -41,7 +65,21 @@ export default {
         "/img/ElasTI/18.png",
         "/img/ElasTI/19.png",
         "/img/ElasTI/20.png",
+      ],
+      escolas: [
+        'Escola A',
+        'Escola B',
+        'Escola C',
+        'Escola D',
+        'Escola E'
       ]
+    }
+  },
+  mounted() {
+    const stored = localStorage.getItem('usuario');
+    if (stored) {
+      this.usuario = JSON.parse(stored);
+      this.cadastroCompleto = true;
     }
   },
   methods: {
@@ -51,6 +89,11 @@ export default {
     },
     voltarMenu() {
       this.jogoIniciado = false;
+    },
+    handleUserRegistered(user) {
+      this.usuario = user;
+      this.cadastroCompleto = true;
+      localStorage.setItem('usuario', JSON.stringify(user));
     }
   }
 };
