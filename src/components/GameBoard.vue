@@ -1,29 +1,37 @@
 <template>
   <div class="game-board">
-    <!-- Botão voltar -->
-    <button class="voltar" @click="$emit('go-back')">Voltar</button>
+    <div v-if="!venceu">
+      <button class="voltar" @click="$emit('go-back')">Voltar</button>
+      
+      <div class="info">
+        <p>Jogadas: {{ moves }}</p>
+      </div>
 
-    <!-- Informações do jogo -->
-    <div class="info">
-      <p>Jogadas: {{ moves }}</p>
+      <div class="grid" :class="dificuldade">
+        <Card
+          v-for="c in cartas"
+          :key="c.id"
+          :carta="c"
+          @click="virarCarta(c)"
+        />
+      </div>
     </div>
 
-    <!-- Grid de cartas -->
-    <div class="grid" :class="dificuldade">
-      <Card
-        v-for="c in cartas"
-        :key="c.id"
-        :carta="c"
-        @click="virarCarta(c)"
-      />
-    </div>
-
-    <!-- Tela de vitória -->
-    <div v-if="venceu" class="victory">
+    <div v-else class="victory">
       <h2>🎉 Parabéns! Você venceu!</h2>
       <p>Jogadas: {{ moves }}</p>
       <p>Pontuação: {{ pontuacao }}</p>
-     <button class="voltar" @click="startGame">Jogar novamente</button>
+
+      <hr>
+      <div class="ranking-form">
+        <button class="voltar" @click="$emit('ver-ranking')">
+          Ver Ranking Global
+        </button>
+      </div>
+
+      <hr>
+      <button class="voltar" @click="startGame">Jogar novamente</button>
+      <button class="voltar" @click="$emit('go-back')">Sair</button>
     </div>
   </div>
 </template>
@@ -31,10 +39,14 @@
 <script>
 import Card from "./Card.vue";
 import women from '../data/women.json'
-
+import { db } from '../firebase'; 
+import { analytics } from '../firebase.js'; // Cuidado com o caminho (../)
+import { logEvent } from "firebase/analytics";
+import { collection,doc, setDoc,updateDoc } from 'firebase/firestore';
 export default {
   components: { Card },
-  props: ["imagens", "dificuldade"],
+  // Adicionamos "usuarioDados" aqui para receber o nome e a escola do App.vue
+  props: ["imagens", "dificuldade", "usuarioDados"],
 
  data() {
   return {
@@ -48,6 +60,7 @@ export default {
 },
 
   created() {
+    console.log("📡 GameBoard Criado! Dados recebidos do App.vue:", this.usuarioDados);
     this.startGame();
   },
 
@@ -133,56 +146,101 @@ export default {
 
 
    verificarPar() {
-  const [c1, c2] = this.selecionadas;
+      const [c1, c2] = this.selecionadas;
 
-  if (c1.valor === c2.valor) {
-    c1.encontrada = true;
-    c2.encontrada = true;
-  } else {
-    c1.virada = false;
-    c2.virada = false;
-  }
+      if (c1.valor === c2.valor) {
+        c1.encontrada = true;
+        c2.encontrada = true;
+      } else {
+        c1.virada = false;
+        c2.virada = false;
+      }
 
-  this.selecionadas = [];
-  this.travado = false;  // 🔓 destrava o jogo
+      this.selecionadas = [];
+      this.travado = false; 
 
-  if (this.cartas.every(c => c.encontrada)) {
-    this.vitoria();
-  }
-},
-
-    vitoria() {
+      if (this.cartas.every(c => c.encontrada)) {
+        this.vitoria();
+      }
+    },
+async vitoria() {
+  logEvent(analytics, 'vitoria_jogo', {
+    dificuldade: this.dificuldade, // Qual nível ela venceu
+    pontuacao: this.pontuacao,     // Quantos pontos fez
+    projeto: "Mulheres na TI"
+  });
+      console.log("🚀 A função vitoria começou!");
       this.venceu = true;
-
-      // Fórmula simples de pontuação
-      // Quanto menos jogadas, mais pontos
       this.pontuacao = Math.max(1000 - this.moves * 20, 0);
 
-      // Salvar recorde se for maior
-      const key = `highscore-${this.dificuldade}`;
-      const currentHigh = parseInt(localStorage.getItem(key) || '0');
-      if (this.pontuacao > currentHigh) {
-        localStorage.setItem(key, this.pontuacao.toString());
+      if (this.usuarioDados && this.usuarioDados.uid) {
+        try {
+          // 1. Ranking Global
+          const rankingId = `${this.usuarioDados.uid}_${this.dificuldade}`;
+          await setDoc(doc(db, "ranking", rankingId), {
+            nome: this.usuarioDados.nome,
+            pontuacao: this.pontuacao,
+            escola: this.usuarioDados.escola,
+            dificuldade: this.dificuldade,
+            data: new Date()
+          }, { merge: true });
+          console.log("✅ Ranking Global OK");
+
+          // 2. Recorde Pessoal
+          const jogadorRef = doc(db, "jogadores", this.usuarioDados.uid);
+          const recordeAtual = Number(this.usuarioDados.recordes?.[this.dificuldade] || 0);
+
+          if (this.pontuacao > recordeAtual) {
+            await updateDoc(jogadorRef, {
+              [`recordes.${this.dificuldade}`]: this.pontuacao
+            });
+            
+            // Atualização local reativa (IMPORTANTE)
+            this.usuarioDados.recordes = {
+              ...this.usuarioDados.recordes,
+              [this.dificuldade]: this.pontuacao
+            };
+            console.log("Novo valor local:", this.usuarioDados.recordes[this.dificuldade]);
+            console.log("✅ Recorde Pessoal Salvo!");
+            this.$emit('vitoria', this.usuarioDados);
+          } else {
+            console.log("ℹ️ Pontuação não superou recorde.");
+          }
+        } catch (error) {
+          console.error("❌ Erro no Firebase:", error);
+        }
+      } else {
+        console.error("⛔ Usuário não identificado para salvar recorde.");
       }
     }
-  }
-};
+  } // fecha methods
+}; // fecha export default
 </script>
 
 <style>
 .game-board {
   width: 100%;
-  min-height: 100vh;
+  /* 1. Mudamos para garantir que o fundo acompanhe o crescimento das cartas */
+  min-height: 100vh; 
+  height: auto; 
 
   background-image: 
     linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)),
     url('/img/menu-fundo.jpg');
+  
+  /* 2. O SEGREDO: Faz a imagem ficar fixa enquanto as cartas deslizam */
+  background-attachment: fixed; 
+  
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  
   padding: 20px;
   margin: 0 auto;
   font-family: 'Evogria', sans-serif;
+  
+  /* 3. SEGURANÇA: Adicione uma cor de fundo parecida com a sua imagem */
+  background-color: #050125; 
 }
 
 /* Informações */
@@ -197,38 +255,31 @@ export default {
 /* CELULAR — cartas pequenas */
 .grid {
   display: grid;
-  justify-items: center; /* centraliza cada carta */
-  width: 100%;
-  max-width: 800px;     /* reduzido para cartas menores */
+  justify-content: space-evenly; /* Centraliza o bloco de cartas na tela */
+  align-content: center;
+ grid-template-columns: repeat(auto-fit, minmax(70px, 160px));
+  width: 95%; 
+  max-width: 1000px;
+  column-gap: 30px; /* Mantém a distância lateral que você gostou */
+  row-gap: 40px; /* <--- AQUI: Aumente ou diminua este valor para afastar as cartas */
+  padding: 20px;
   margin: 0 auto;
-
-  gap: 10px;  /* reduzido */
-  padding: 10px;
-}
-
-.grid.facil {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.grid.medio {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.grid.dificil {
-  grid-template-columns: repeat(4, 1fr);
+  border-radius: 8px;
 }
 
 /* TELAS MÉDIAS (tablets) */
 @media (min-width: 600px) {
   .grid {
-    gap: 12px;
+    column-gap: 70px; /* Mantém a distância lateral que você gostou */
+  row-gap: 40px;
   }
 } 
 
 /* COMPUTADOR — cartas maiores */
 @media (min-width: 1000px) {
   .grid {
-    gap: 15px;
+   column-gap: 70px; /* Mantém a distância lateral que você gostou */
+  row-gap: 40px;
   }
 }
 

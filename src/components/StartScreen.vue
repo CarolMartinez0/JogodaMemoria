@@ -1,7 +1,13 @@
 <template>
   <div class="start-screen">
-     <h1 class="titulo-texto">Jogo da Memória</h1>
-    <!-- Título como imagem -->
+    <div class="header-actions">
+      <button @click="$emit('sair')" class="btn-finalizar-topo">
+        FECHAR JOGO
+      </button>
+    </div>
+    
+    <h1 class="titulo-texto">Jogo da Memória</h1>
+    
     <div class="titulo-container">
       <img src="/img/logo-titulo.png" alt="Logo da StoryGirl" class="titulo-img" />
     </div>
@@ -13,7 +19,6 @@
     <p>Escolha a dificuldade:</p>
 
     <div class="buttons">
-
       <button @click="start('facil')">Fácil (4 pares)</button>
       <button @click="start('medio')">Médio (6 pares)</button>
       <button @click="start('dificil')">Difícil (8 pares)</button>
@@ -25,20 +30,24 @@
       <p>Médio: {{ highscoreMedio }} pontos</p>
       <p>Difícil: {{ highscoreDificil }} pontos</p>
     </div>
-  </div>
+  </div> 
 </template>
 
 <script>
 export default {
+  // Certifique-se de que o usuarioDados está chegando aqui (via props ou vindo do App.vue)
+  props: ['usuarioDados'], 
+
   computed: {
     highscoreFacil() {
-      return localStorage.getItem('highscore-facil') || 0;
+      // Tenta pegar do objeto do Firebase, se não existir, mostra 0
+      return this.usuarioDados?.recordes?.facil || 0;
     },
     highscoreMedio() {
-      return localStorage.getItem('highscore-medio') || 0;
+      return this.usuarioDados?.recordes?.medio || 0;
     },
     highscoreDificil() {
-      return localStorage.getItem('highscore-dificil') || 0;
+      return this.usuarioDados?.recordes?.dificil || 0;
     }
   },
   methods: {
@@ -52,62 +61,60 @@ export default {
 };
 </script>
 
-<style>
-/* Container principal do menu */
+<style scoped>
+/* UNIFICADO: Container principal */
 .start-screen {
+  position: relative; /* ESSENCIAL para o botão absolute funcionar */
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
   text-align: center;
+  
   background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('/img/menu-fundo.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  padding-top: 50px;
+  background-attachment: fixed;
+  
+  padding-top: 80px; /* Aumentado para o título não bater no botão */
+  padding-bottom: 50px;
   box-sizing: border-box;
   font-family: 'Evogria', sans-serif;
 }
 
-/* Container do título */
-.titulo-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
+/* POSICIONAMENTO DO BOTÃO */
+.header-actions {
+  position: absolute; 
+  top: 20px;          
+  right: 20px;        
+  z-index: 100; /* Garante que fique acima de tudo */
 }
 
-/* Texto do título */
-.titulo-texto {
+.btn-finalizar-topo {
+  background-color: #e74c3c;
   color: white;
-  font-size: 2rem;
-  margin-bottom: 20px;
+  border: 2px solid white;
+  padding: 10px 18px;
+  font-family: 'Evogria', sans-serif;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-/* Imagem do título responsiva */
-.titulo-img {
-  max-width: 40%;
-  width: auto;
-  height: auto;
-  min-width: 200px;
-  object-fit: contain;
-  display: block;
+.btn-finalizar-topo:hover {
+  background-color: #c0392b;
+  transform: scale(1.1);
 }
 
-/* Texto do menu */
-.start-screen p {
-  color: white;
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-}
-
-/* Botões */
-.buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
+/* RESTANTE DOS ESTILOS (Títulos, Recordes, etc) */
+.titulo-texto { color: white; font-size: 2rem; margin-bottom: 20px; }
+.titulo-img { max-width: 40%; min-width: 200px; object-fit: contain; }
+.start-screen p { color: white; margin-bottom: 20px; font-size: 1.5rem; }
 
 .buttons button {
   margin: 10px;
@@ -118,59 +125,19 @@ export default {
   border-radius: 10px;
   background-color: #ff69b4;
   color: white;
-  transition: all 0.2s;
   font-family: 'Evogria', sans-serif;
 }
 
-.buttons button:hover {
-  background-color: #ff1493;
-  transform: scale(1.05);
-}
-
-/* Seção de introdução */
-.intro-section {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
 .intro-button {
-  padding: 16px 32px;
-  font-size: 1.4rem;
-  font-weight: bold;
-  cursor: pointer;
-  border: 2px solid white;
-  border-radius: 12px;
-  background-color: rgba(255, 105, 180, 0.8); /* Fundo rosa claro */
-  color: white;
-  transition: all 0.3s;
-  font-family: 'Evogria', sans-serif;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-
-.intro-button:hover {
-  background-color: rgba(255, 105, 180, 1);
-  transform: scale(1.1);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Estilo específico para o botão de introdução */
-.intro-button {
-  font-size: 1.5rem;
   padding: 18px 36px;
+  font-size: 1.5rem;
   border: 2px solid white;
-  box-shadow: 0 0 15px rgba(255,255,255,0.7);
   background-color: rgba(255,255,255,0.9);
   color: #333;
   font-family: 'Evogria', sans-serif;
+  border-radius: 12px;
 }
-
-.intro-button:hover {
-  background-color: white;
-  box-shadow: 0 0 20px rgba(255,255,255,0.9);
-  transform: scale(1.1);
-}
-
+/* Seção de recordes atualizada */
 /* Seção de recordes */
 .records {
   margin-top: 30px;

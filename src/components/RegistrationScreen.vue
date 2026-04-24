@@ -33,10 +33,14 @@
           <input class="field-control small-input" type="text" v-model="anoLetivo" placeholder="Ex: 6º ano" required />
         </label>
 
-        <label class="checkbox-label">
-          <input type="checkbox" v-model="participarRanking" />
-          Quero participar do ranking
-        </label>
+   <div class="checkbox-container">
+  <label class="checkbox-label">
+    <input type="checkbox" v-model="participarRanking" />
+    Quero participar do ranking
+  </label>
+</div>
+        
+        
 
         <button type="submit" :disabled="loading">
           {{ loading ? 'Enviando...' : 'Finalizar cadastro' }}
@@ -52,7 +56,7 @@
 import { registerUser } from "../firebase";
 
 export default {
-  emits: ["registered"],
+  emits: ["login-sucesso"],
   props: {
     escolas: {
       type: Array,
@@ -71,8 +75,9 @@ export default {
       error: ""
     };
   },
-  methods: {
+methods: {
     async submitForm() {
+      // A seta deve sumir se as chaves estiverem certas antes daqui
       if (!this.nome) {
         this.error = "Por favor, informe o primeiro nome.";
         return;
@@ -92,19 +97,19 @@ export default {
           tipoUsuario: this.tipoUsuario,
           escola: this.tipoUsuario === 'aluno' ? this.escola : "",
           anoLetivo: this.tipoUsuario === 'aluno' ? this.anoLetivo : "",
-          pontuacaoMaxima: this.pontuacaoMaxima,
+          pontuacaoMaxima: 0,
           participarRanking: this.participarRanking
         });
-        this.$emit("registered", user);
+
+        this.$emit("login-sucesso", user); 
       } catch (err) {
-        console.error(err);
-        this.error = "Não foi possível concluir o cadastro. Verifique a conexão ou a configuração do Firebase.";
+        console.error("Erro no cadastro:", err);
+        this.error = "Não foi possível concluir o cadastro.";
       } finally {
         this.loading = false;
       }
-    }
-  }
-};
+    } // Fecha o submitForm
+  }};
 </script>
 
 <style>
@@ -247,5 +252,10 @@ button:hover:not(:disabled) {
   background: rgba(255, 105, 180, 0.14);
   padding: 12px 14px;
   border-radius: 12px;
+}
+
+.field-control, .small-input {
+  width: 100%; /* Muda para 100% para ser responsivo */
+  max-width: 420px; /* Mas não deixa passar de 420px no PC */
 }
 </style>

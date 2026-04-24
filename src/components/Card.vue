@@ -46,7 +46,6 @@ export default {
 
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden; /* NECESSÁRIO para Android/iPhone */
-
   transform-style: preserve-3d; /* Melhora consistência */
   will-change: transform; /* Otimiza para celular */
 
