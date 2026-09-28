@@ -107,12 +107,6 @@ const substantivos = ["Capivara", "Panda", "Gato", "Raposa", "Unicórnio", "Borb
 
 export default {
   emits: ["login-sucesso"],
-  props: {
-    escolas: {
-      type: Array,
-      default: () => []
-    }
-  },
   data() {
     return {
       modoAcesso: "", // '' (nenhum selecionado), 'visitante' ou 'cadastro'
@@ -338,6 +332,12 @@ export default {
 .btn-submit:hover:not(:disabled) {
   transform: translateY(-1px);
 }
+
+.error {
+  color: #ff6b6b;
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
 </style>
 
 <style>
@@ -396,9 +396,9 @@ label {
 
 input,
 select {
-  box-sizing: border-box; /* Inclui o padding no cálculo da largura total */
+  box-sizing: border-box;
   width: 100%;
-  max-width: 100%;       /* Impede que o campo saia da tela ou do card */
+  max-width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 14px;
   padding: 14px 16px;
@@ -410,43 +410,5 @@ select {
 
 .field-control {
   width: 100%;
-}
-
-select option {
-  color: #111;
-  background: #fff;
-}
-
-input:focus,
-select:focus {
-  border-color: #ff8bda;
-  box-shadow: 0 0 0 4px rgba(255, 139, 218, 0.16);
-}
-
-.checkbox-container {
-  margin-top: 4px;
-}
-
-.checkbox-label {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 14px;
-  cursor: pointer;
-}
-
-input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  accent-color: #ff69b4;
-  cursor: pointer;
-}
-
-.error {
-  color: #ffd6e8;
-  background: rgba(255, 105, 180, 0.14);
-  padding: 12px 14px;
-  border-radius: 12px;
-  margin-top: 14px;
 }
 </style>
