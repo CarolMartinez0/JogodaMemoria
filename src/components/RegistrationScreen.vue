@@ -1,68 +1,86 @@
 <template>
   <div class="registration-screen">
     <div class="card">
-      <h1>Cadastro de usuário</h1>
+      <h1>Acesso ao Jogo</h1>
       <img class="card-logo" src="/img/ElasTI/logo.png" alt="Logo" />
 
-      <form @submit.prevent="submitForm">
-        <label>
-          Tipo de usuário
-          <select class="field-control" v-model="tipoUsuario" @change="limparCampos" required>
-            <option value="aluno">Aluno(a)</option>
-            <option value="professor">Professor(a)</option>
-          </select>
-        </label>
+      <!-- PASSO 1: BOTÕES DE ESCOLHA INICIAL -->
+      <div class="mode-selector" v-if="!modoAcesso">
+        <button 
+          type="button" 
+          class="btn-mode btn-cadastro" 
+          @click="selecionarModo('cadastro')"
+        >
+          Fazer Cadastro
+        </button>
 
+        <button 
+          type="button" 
+          class="btn-mode btn-visitante" 
+          @click="selecionarModo('visitante')"
+        >
+          Entrar como Visitante
+        </button>
+      </div>
+
+      <!-- PASSO 2: FORMULÁRIO EXIBIDO APÓS ESCOLHER O MODO -->
+      <form v-else @submit.prevent="submitForm">
+        
+        <div class="form-header">
+          <h2>{{ modoAcesso === 'cadastro' ? 'Cadastro' : 'Acesso Visitante' }}</h2>
+          <button type="button" class="btn-change-mode" @click="resetarModo">
+            ← Trocar opção
+          </button>
+        </div>
+
+        <!-- SUB-OPÇÕES SE ESCOLHER "FAZER CADASTRO" -->
+        <template v-if="modoAcesso === 'cadastro'">
+          <label>
+            Tipo de Cadastro
+            <select class="field-control" v-model="tipoUsuario" @change="limparSubCampos" required>
+              <option value="aluno">Aluno(a)</option>
+              <option value="responsavel">Responsável</option>
+            </select>
+          </label>
+
+          <!-- CAMPO DE ANO ESCOLAR COMO TEXTO LIVRE -->
+          <label v-if="tipoUsuario === 'aluno'">
+            Ano Escolar
+            <input 
+              class="field-control" 
+              type="text" 
+              v-model="anoEscolar" 
+              placeholder="Ex: 7º Ano, 3º Ano do Ensino Médio..." 
+              required 
+            />
+          </label>
+        </template>
+
+        <!-- NOME SEMPRE SORTEADO -->
         <label>
-          {{ tipoUsuario === 'aluno' ? 'Nome de Usuário (Sorteado)' : 'Nome Completo' }}
+          Seu Nome de Usuário (Sorteado)
           <div class="input-with-button">
             <input 
               class="field-control" 
               type="text" 
               v-model="nome" 
-              :placeholder="tipoUsuario === 'aluno' ? 'Clique ao lado para gerar seu apelido' : 'Digite seu nome'" 
-              :readonly="tipoUsuario === 'aluno'"
+              placeholder="Clique ao lado para gerar seu apelido" 
+              readonly
               required 
             />
-            <button v-if="tipoUsuario === 'aluno'" type="button" class="btn-random" @click="sortearNome" title="Gerar nome aleatório">
+            <button 
+              type="button" 
+              class="btn-random" 
+              @click="sortearNome" 
+              title="Gerar outro nome aleatório"
+            >
               🔄 Sorteie para mim
             </button>
           </div>
-          <span class="hint-text" v-if="nomeGerado && tipoUsuario === 'aluno'">
+          <span class="hint-text" v-if="nomeGerado">
             Apelido gerado! Se não gostou, clique em sortear novamente.
           </span>
         </label>
-
-        <template v-if="tipoUsuario === 'professor'">
-          <label>
-            Escola / Instituição
-            <select class="field-control" v-model="escola" required>
-              <option disabled value="">Selecione uma escola</option>
-              <option v-for="escolaItem in escolas" :key="escolaItem" :value="escolaItem">
-                {{ escolaItem }}
-              </option>
-            </select>
-          </label>
-
-          <label>
-            Nome da Turma que deseja criar
-            <input class="field-control" type="text" v-model="nomeTurma" placeholder="Ex: 5º Ano B - Tarde" required />
-          </label>
-        </template>
-
-        <template v-if="tipoUsuario === 'aluno'">
-          <label>
-            Código da Turma (Peça para sua professora)
-            <input 
-              class="field-control" 
-              type="text" 
-              v-model="codigoTurmaInformado" 
-              placeholder="Ex:ABC0" 
-              @input="codigoTurmaInformado = codigoTurmaInformado.toUpperCase()"
-              required 
-            />
-          </label>
-        </template>
 
         <div class="checkbox-container">
           <label class="checkbox-label">
@@ -71,8 +89,8 @@
           </label>
         </div>
 
-        <button type="submit" :disabled="loading || !nome">
-          {{ loading ? 'Enviando...' : 'Finalizar cadastro' }}
+        <button type="submit" class="btn-submit" :disabled="loading || !nome">
+          {{ loading ? 'Enviando...' : (modoAcesso === 'visitante' ? 'Entrar no Jogo' : 'Finalizar cadastro') }}
         </button>
       </form>
 
@@ -84,8 +102,8 @@
 <script>
 import { registerUser } from "../firebase";
 
-const adjetivos = ["Super", "Veloz", "Curioso", "Gamer", "Mestre", "Rápido", "Lendário", "Esperto", "Criativo", "Legante"];
-const substantivos = ["Capivara", "Panda", "Gato", "Raposa", "Unicórnio", "Borbolheta", "Dragão", "Pinguim", "Leão", "Lobo"];
+const adjetivos = ["Super", "Veloz", "Curioso", "Gamer", "Mestre", "Rápido", "Lendário", "Esperto", "Criativo", "Elegante"];
+const substantivos = ["Capivara", "Panda", "Gato", "Raposa", "Unicórnio", "Borboleta", "Dragão", "Pinguim", "Leão", "Lobo"];
 
 export default {
   emits: ["login-sucesso"],
@@ -97,19 +115,29 @@ export default {
   },
   data() {
     return {
+      modoAcesso: "", // '' (nenhum selecionado), 'visitante' ou 'cadastro'
+      tipoUsuario: "aluno", // 'aluno' ou 'responsavel'
       nome: "",
       nomeGerado: false,
-      tipoUsuario: "aluno",
-      escola: "",
-      nomeTurma: "",
-      codigoTurmaInformado: "",
-      codigoTurmaGerado: "",
+      anoEscolar: "",
       participarRanking: true,
       loading: false,
       error: ""
     };
   },
   methods: {
+    selecionarModo(modo) {
+      this.modoAcesso = modo;
+      this.error = "";
+      this.anoEscolar = "";
+      this.sortearNome();
+    },
+    resetarModo() {
+      this.modoAcesso = "";
+      this.error = "";
+      this.nome = "";
+      this.nomeGerado = false;
+    },
     sortearNome() {
       const adj = adjetivos[Math.floor(Math.random() * adjetivos.length)];
       const sub = substantivos[Math.floor(Math.random() * substantivos.length)];
@@ -118,101 +146,136 @@ export default {
       this.nome = `${sub}${adj}${num}`;
       this.nomeGerado = true;
     },
-    limparCampos() {
-      this.nome = "";
-      this.nomeGerado = false;
-      this.escola = "";
-      this.nomeTurma = ""; // Corrigido de nomedataTurma para nomeTurma
-      this.codigoTurmaInformado = "";
+    limparSubCampos() {
+      this.anoEscolar = "";
       this.error = "";
+      this.sortearNome();
     },
-    gerarCodigoTurmaUnico() {
-  const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  const numeros = "0123456789";
-  let resultado = "";
-
-  // 1. Sorteia as 3 primeiras letras
-  for (let i = 0; i < 3; i++) {
-    resultado += letras.charAt(Math.floor(Math.random() * letras.length));
-  }
-
-  // 2. Sorteia o último dígito (sempre um número)
-  resultado += numeros.charAt(Math.floor(Math.random() * numeros.length));
-
-  return resultado;
-},
     async submitForm() {
       if (!this.nome) {
-        this.error = "Por favor, preencha o campo de nome.";
+        this.error = "Por favor, sorteie um nome de usuário.";
         return;
       }
 
-      if (this.tipoUsuario === 'professor' && (!this.escola || !this.nomeTurma)) {
-        this.error = "Por favor, preencha a escola e o nome da turma.";
+      if (this.modoAcesso === 'cadastro' && this.tipoUsuario === 'aluno' && !this.anoEscolar.trim()) {
+        this.error = "Por favor, digite seu ano escolar.";
         return;
       }
 
-      if (this.tipoUsuario === 'aluno' && !this.codigoTurmaInformado) {
-        this.error = "Por favor, digite o código da turma.";
-        return;
-      }
-
-     this.error = "";
+      this.error = "";
       this.loading = true;
 
-      // 1. Gera o código se for professor
-      if (this.tipoUsuario === 'professor') {
-        this.codigoTurmaGerado = this.gerarCodigoTurmaUnico();
-      }
-
-      // 2. Monta o objeto exatamente com as propriedades que o banco espera
       let dadosCadastro = {
         nome: this.nome,
-        tipoUsuario: this.tipoUsuario,
+        modoAcesso: this.modoAcesso,
+        tipoUsuario: this.modoAcesso === 'visitante' ? 'visitante' : this.tipoUsuario,
         participarRanking: this.participarRanking,
         pontuacaoMaxima: 0
       };
 
-      if (this.tipoUsuario === 'professor') {
-        dadosCadastro.escola = this.escola;
-        dadosCadastro.nomeTurma = this.nomeTurma;
-        dadosCadastro.codigoTurma = this.codigoTurmaGerado; // <-- ESSENCIAL: Garanta esta linha!
-      } else if (this.tipoUsuario === 'aluno') {
-        dadosCadastro.codigoTurmaVinculado = this.codigoTurmaInformado;
+      if (this.modoAcesso === 'cadastro' && this.tipoUsuario === 'aluno') {
+        dadosCadastro.anoEscolar = this.anoEscolar.trim();
       }
 
       try {
-        // 🔍 LOG DE TESTE: Vamos ver o que está indo para o Firebase
         console.log("=== ENVIANDO PARA O FIREBASE ===", dadosCadastro);
 
-        this.usuarioRegistrado = await registerUser(dadosCadastro);
+        const usuarioRegistrado = await registerUser(dadosCadastro);
         
-        // 🔍 LOG DE TESTE: Vamos ver o que o Firebase devolveu
-        console.log("=== RETORNO DO FIREBASE ===", this.usuarioRegistrado);
+        console.log("=== RETORNO DO FIREBASE ===", usuarioRegistrado);
 
-        this.$emit("login-sucesso", this.usuarioRegistrado);
-    } catch (err) {
-     console.error("Erro no cadastro:", err);
-  
-     // 🌟 Captura o texto exato do erro ("Código de turma inválido...") 
-     // que enviamos através do 'throw new Error' lá no registerUser
-     this.error = err.message || "Não foi possível concluir o cadastro.";
-  
-     } finally {
-       this.loading = false;
-   }
+        this.$emit("login-sucesso", usuarioRegistrado);
+      } catch (err) {
+        console.error("Erro no cadastro:", err);
+        this.error = err.message || "Não foi possível concluir o acesso.";
+      } finally {
+        this.loading = false;
+      }
     }
   }
 };
 </script>
 
 <style scoped>
+/* Seletor de Modo Empilhado e Largo */
+.mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.btn-mode {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  font-family: inherit;
+}
+
+/* Botão Cadastro: Rosa */
+.btn-cadastro {
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  border: none;
+  color: white;
+}
+
+.btn-cadastro:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+/* Botão Visitante: Neutro */
+.btn-visitante {
+  background: rgba(255, 255, 255, 0.12);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.btn-visitante:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Cabeçalho do Formulário */
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.form-header h2 {
+  font-size: 1.2rem;
+  color: #ff8bda;
+  margin: 0;
+}
+
+.btn-change-mode {
+  background: transparent;
+  border: none;
+  color: #ffb7e2;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  width: auto;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
+.btn-change-mode:hover {
+  color: #ffffff;
+}
+
 .input-with-button {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-width: 420px;
 }
 
 @media (min-width: 440px) {
@@ -252,10 +315,32 @@ export default {
   margin-top: 4px;
   font-family: sans-serif;
 }
+
+.btn-submit {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
 </style>
 
 <style>
-/* SEUS ESTILOS GLOBAIS ORIGINAIS COMPLETOS */
 .registration-screen {
   min-height: 100vh;
   display: flex;
@@ -292,14 +377,9 @@ export default {
 }
 
 .card h1 {
-  margin-bottom: 12px;
+  margin-bottom: 18px;
   font-size: 2rem;
   color: #ffe7ff;
-}
-
-.card p {
-  margin-bottom: 24px;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 form {
@@ -316,7 +396,9 @@ label {
 
 input,
 select {
+  box-sizing: border-box; /* Inclui o padding no cálculo da largura total */
   width: 100%;
+  max-width: 100%;       /* Impede que o campo saia da tela ou do card */
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 14px;
   padding: 14px 16px;
@@ -326,18 +408,8 @@ select {
   outline: none;
 }
 
-select {
-  color: #111;
-}
-
 .field-control {
-  width: 420px;
-  max-width: 100%;
-}
-
-.small-input {
-  width: 420px;
-  max-width: 100%;
+  width: 100%;
 }
 
 select option {
@@ -351,8 +423,8 @@ select:focus {
   box-shadow: 0 0 0 4px rgba(255, 139, 218, 0.16);
 }
 
-.small-input {
-  max-width: 320px;
+.checkbox-container {
+  margin-top: 4px;
 }
 
 .checkbox-label {
@@ -360,34 +432,14 @@ select:focus {
   flex-direction: row;
   align-items: center;
   gap: 14px;
+  cursor: pointer;
 }
 
 input[type="checkbox"] {
   width: 20px;
   height: 20px;
   accent-color: #ff69b4;
-}
-
-button {
-  width: 100%;
-  padding: 16px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ff69b4, #ff1493);
-  color: white;
-  font-size: 1.1rem;
-  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-button:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-button:hover:not(:disabled) {
-  transform: translateY(-1px);
 }
 
 .error {
@@ -395,10 +447,6 @@ button:hover:not(:disabled) {
   background: rgba(255, 105, 180, 0.14);
   padding: 12px 14px;
   border-radius: 12px;
-}
-
-.field-control, .small-input {
-  width: 100%; 
-  max-width: 420px; 
+  margin-top: 14px;
 }
 </style>

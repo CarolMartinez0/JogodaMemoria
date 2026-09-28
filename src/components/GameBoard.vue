@@ -20,13 +20,9 @@
       <p>Pontuação: {{ pontuacao }}</p>
 
       <hr>
-     <div class="ranking-form">
-  <button class="voltar" @click="$emit('ver-ranking', 'turma')">
-      Ver Ranking da Turma
-  </button>
-  
-  <button class="voltar" @click="$emit('ver-ranking', 'geral')">
-      Ver Ranking das Turmas
+   <div class="ranking-form">
+  <button class="voltar" @click="$emit('ver-ranking')">
+    🏆 Ver Ranking Geral
   </button>
 </div>
 
@@ -192,7 +188,7 @@ async vitoria() {
         const rankingId = `${this.usuarioDados.uid}_${this.dificuldade}`;
         await setDoc(doc(db, "ranking", rankingId), {
           nome: this.usuarioDados.nome,
-          escola: this.usuarioDados.escola,
+          anoEscolar: this.usuarioDados.anoEscolar || 'Visitante',
           pontuacao: this.pontuacao,
           dificuldade: this.dificuldade,
           codigoTurmaVinculado: this.usuarioDados.codigoTurmaVinculado || this.usuarioDados.codigoTurma || '',
