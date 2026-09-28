@@ -6,43 +6,72 @@
 
       <form @submit.prevent="submitForm">
         <label>
-          Primeiro nome
-          <input class="field-control" type="text" v-model="nome" placeholder="Digite seu primeiro nome" required />
+          Tipo de usuário
+          <select class="field-control" v-model="tipoUsuario" @change="limparCampos" required>
+            <option value="aluno">Aluno(a)</option>
+            <option value="professor">Professor(a)</option>
+          </select>
         </label>
 
         <label>
-          Tipo de usuário
-          <select class="field-control" v-model="tipoUsuario" required>
-            <option value="aluno">Aluno</option>
-            <option value="responsavel">Responsável</option>
-          </select>
+          {{ tipoUsuario === 'aluno' ? 'Nome de Usuário (Sorteado)' : 'Nome Completo' }}
+          <div class="input-with-button">
+            <input 
+              class="field-control" 
+              type="text" 
+              v-model="nome" 
+              :placeholder="tipoUsuario === 'aluno' ? 'Clique ao lado para gerar seu apelido' : 'Digite seu nome'" 
+              :readonly="tipoUsuario === 'aluno'"
+              required 
+            />
+            <button v-if="tipoUsuario === 'aluno'" type="button" class="btn-random" @click="sortearNome" title="Gerar nome aleatório">
+              🔄 Sorteie para mim
+            </button>
+          </div>
+          <span class="hint-text" v-if="nomeGerado && tipoUsuario === 'aluno'">
+            Apelido gerado! Se não gostou, clique em sortear novamente.
+          </span>
         </label>
 
-        <label v-if="tipoUsuario === 'aluno'">
-          Escola
-          <select class="field-control" v-model="escola" required>
-            <option disabled value="">Selecione uma escola</option>
-            <option v-for="escolaItem in escolas" :key="escolaItem" :value="escolaItem">
-              {{ escolaItem }}
-            </option>
-          </select>
-        </label>
+        <template v-if="tipoUsuario === 'professor'">
+          <label>
+            Escola / Instituição
+            <select class="field-control" v-model="escola" required>
+              <option disabled value="">Selecione uma escola</option>
+              <option v-for="escolaItem in escolas" :key="escolaItem" :value="escolaItem">
+                {{ escolaItem }}
+              </option>
+            </select>
+          </label>
 
-        <label v-if="tipoUsuario === 'aluno'">
-          Ano letivo
-          <input class="field-control small-input" type="text" v-model="anoLetivo" placeholder="Ex: 6º ano" required />
-        </label>
+          <label>
+            Nome da Turma que deseja criar
+            <input class="field-control" type="text" v-model="nomeTurma" placeholder="Ex: 5º Ano B - Tarde" required />
+          </label>
+        </template>
 
-   <div class="checkbox-container">
-  <label class="checkbox-label">
-    <input type="checkbox" v-model="participarRanking" />
-    Quero participar do ranking
-  </label>
-</div>
-        
-        
+        <template v-if="tipoUsuario === 'aluno'">
+          <label>
+            Código da Turma (Peça para sua professora)
+            <input 
+              class="field-control" 
+              type="text" 
+              v-model="codigoTurmaInformado" 
+              placeholder="Ex:ABC0" 
+              @input="codigoTurmaInformado = codigoTurmaInformado.toUpperCase()"
+              required 
+            />
+          </label>
+        </template>
 
-        <button type="submit" :disabled="loading">
+        <div class="checkbox-container">
+          <label class="checkbox-label">
+            <input type="checkbox" v-model="participarRanking" />
+            Quero participar do ranking
+          </label>
+        </div>
+
+        <button type="submit" :disabled="loading || !nome">
           {{ loading ? 'Enviando...' : 'Finalizar cadastro' }}
         </button>
       </form>
@@ -55,6 +84,9 @@
 <script>
 import { registerUser } from "../firebase";
 
+const adjetivos = ["Super", "Veloz", "Curioso", "Gamer", "Mestre", "Rápido", "Lendário", "Esperto", "Criativo", "Legante"];
+const substantivos = ["Capivara", "Panda", "Gato", "Raposa", "Unicórnio", "Borbolheta", "Dragão", "Pinguim", "Leão", "Lobo"];
+
 export default {
   emits: ["login-sucesso"],
   props: {
@@ -66,53 +98,164 @@ export default {
   data() {
     return {
       nome: "",
+      nomeGerado: false,
       tipoUsuario: "aluno",
       escola: "",
-      anoLetivo: "",
-      pontuacaoMaxima: 0,
+      nomeTurma: "",
+      codigoTurmaInformado: "",
+      codigoTurmaGerado: "",
       participarRanking: true,
       loading: false,
       error: ""
     };
   },
-methods: {
-    async submitForm() {
-      // A seta deve sumir se as chaves estiverem certas antes daqui
-      if (!this.nome) {
-        this.error = "Por favor, informe o primeiro nome.";
-        return;
-      }
-
-      if (this.tipoUsuario === 'aluno' && (!this.escola || !this.anoLetivo)) {
-        this.error = "Por favor, preencha escola e ano letivo.";
-        return;
-      }
-
+  methods: {
+    sortearNome() {
+      const adj = adjetivos[Math.floor(Math.random() * adjetivos.length)];
+      const sub = substantivos[Math.floor(Math.random() * substantivos.length)];
+      const num = Math.floor(100 + Math.random() * 900);
+      
+      this.nome = `${sub}${adj}${num}`;
+      this.nomeGerado = true;
+    },
+    limparCampos() {
+      this.nome = "";
+      this.nomeGerado = false;
+      this.escola = "";
+      this.nomeTurma = ""; // Corrigido de nomedataTurma para nomeTurma
+      this.codigoTurmaInformado = "";
       this.error = "";
+    },
+    gerarCodigoTurmaUnico() {
+  const letras = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const numeros = "0123456789";
+  let resultado = "";
+
+  // 1. Sorteia as 3 primeiras letras
+  for (let i = 0; i < 3; i++) {
+    resultado += letras.charAt(Math.floor(Math.random() * letras.length));
+  }
+
+  // 2. Sorteia o último dígito (sempre um número)
+  resultado += numeros.charAt(Math.floor(Math.random() * numeros.length));
+
+  return resultado;
+},
+    async submitForm() {
+      if (!this.nome) {
+        this.error = "Por favor, preencha o campo de nome.";
+        return;
+      }
+
+      if (this.tipoUsuario === 'professor' && (!this.escola || !this.nomeTurma)) {
+        this.error = "Por favor, preencha a escola e o nome da turma.";
+        return;
+      }
+
+      if (this.tipoUsuario === 'aluno' && !this.codigoTurmaInformado) {
+        this.error = "Por favor, digite o código da turma.";
+        return;
+      }
+
+     this.error = "";
       this.loading = true;
 
-      try {
-        const user = await registerUser({
-          nome: this.nome,
-          tipoUsuario: this.tipoUsuario,
-          escola: this.tipoUsuario === 'aluno' ? this.escola : "",
-          anoLetivo: this.tipoUsuario === 'aluno' ? this.anoLetivo : "",
-          pontuacaoMaxima: 0,
-          participarRanking: this.participarRanking
-        });
-
-        this.$emit("login-sucesso", user); 
-      } catch (err) {
-        console.error("Erro no cadastro:", err);
-        this.error = "Não foi possível concluir o cadastro.";
-      } finally {
-        this.loading = false;
+      // 1. Gera o código se for professor
+      if (this.tipoUsuario === 'professor') {
+        this.codigoTurmaGerado = this.gerarCodigoTurmaUnico();
       }
-    } // Fecha o submitForm
-  }};
+
+      // 2. Monta o objeto exatamente com as propriedades que o banco espera
+      let dadosCadastro = {
+        nome: this.nome,
+        tipoUsuario: this.tipoUsuario,
+        participarRanking: this.participarRanking,
+        pontuacaoMaxima: 0
+      };
+
+      if (this.tipoUsuario === 'professor') {
+        dadosCadastro.escola = this.escola;
+        dadosCadastro.nomeTurma = this.nomeTurma;
+        dadosCadastro.codigoTurma = this.codigoTurmaGerado; // <-- ESSENCIAL: Garanta esta linha!
+      } else if (this.tipoUsuario === 'aluno') {
+        dadosCadastro.codigoTurmaVinculado = this.codigoTurmaInformado;
+      }
+
+      try {
+        // 🔍 LOG DE TESTE: Vamos ver o que está indo para o Firebase
+        console.log("=== ENVIANDO PARA O FIREBASE ===", dadosCadastro);
+
+        this.usuarioRegistrado = await registerUser(dadosCadastro);
+        
+        // 🔍 LOG DE TESTE: Vamos ver o que o Firebase devolveu
+        console.log("=== RETORNO DO FIREBASE ===", this.usuarioRegistrado);
+
+        this.$emit("login-sucesso", this.usuarioRegistrado);
+    } catch (err) {
+     console.error("Erro no cadastro:", err);
+  
+     // 🌟 Captura o texto exato do erro ("Código de turma inválido...") 
+     // que enviamos através do 'throw new Error' lá no registerUser
+     this.error = err.message || "Não foi possível concluir o cadastro.";
+  
+     } finally {
+       this.loading = false;
+   }
+    }
+  }
+};
 </script>
 
+<style scoped>
+.input-with-button {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+}
+
+@media (min-width: 440px) {
+  .input-with-button {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.input-with-button .field-control {
+  flex: 1;
+}
+
+.btn-random {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #4b3f72, #1f1a3a);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  font-weight: bold;
+  font-family: inherit;
+  width: auto;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.btn-random:hover {
+  background: linear-gradient(135deg, #5c4e8c, #2b244d);
+  transform: scale(1.02);
+}
+
+.hint-text {
+  font-size: 0.8rem;
+  color: #ffb7e2;
+  margin-top: 4px;
+  font-family: sans-serif;
+}
+</style>
+
 <style>
+/* SEUS ESTILOS GLOBAIS ORIGINAIS COMPLETOS */
 .registration-screen {
   min-height: 100vh;
   display: flex;
@@ -255,7 +398,7 @@ button:hover:not(:disabled) {
 }
 
 .field-control, .small-input {
-  width: 100%; /* Muda para 100% para ser responsivo */
-  max-width: 420px; /* Mas não deixa passar de 420px no PC */
+  width: 100%; 
+  max-width: 420px; 
 }
 </style>

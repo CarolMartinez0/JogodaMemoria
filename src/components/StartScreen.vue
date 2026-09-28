@@ -30,17 +30,38 @@
       <p>Médio: {{ highscoreMedio }} pontos</p>
       <p>Difícil: {{ highscoreDificil }} pontos</p>
     </div>
+
+    <div v-if="mostrarModalCodigo" class="modal-overlay">
+      <div class="victory-modal">
+        <h2>🎉 Bem-vinda, Professora!</h2>
+        <p>Seu cadastro foi realizado com sucesso.</p>
+        
+        <div class="code-box">
+          <p>O código da sua turma é:</p>
+          <span class="generated-code">{{ codigoTurma }}</span>
+          <p class="instruction">Compartilhe esse código com seus alunos para que eles entrem na sua sala.</p>
+        </div>
+
+        <button class="btn-confirm" @click="mostrarModalCodigo = false">Começar</button>
+      </div>
+    </div>
   </div> 
 </template>
 
 <script>
 export default {
-  // Certifique-se de que o usuarioDados está chegando aqui (via props ou vindo do App.vue)
   props: ['usuarioDados'], 
+
+  data() {
+    return {
+      // Variáveis para controlar a exibição do aviso
+      mostrarModalCodigo: false,
+      codigoTurma: ""
+    };
+  },
 
   computed: {
     highscoreFacil() {
-      // Tenta pegar do objeto do Firebase, se não existir, mostra 0
       return this.usuarioDados?.recordes?.facil || 0;
     },
     highscoreMedio() {
@@ -50,6 +71,18 @@ export default {
       return this.usuarioDados?.recordes?.dificil || 0;
     }
   },
+
+mounted() {
+    // 🔍 ADICIONE ESTE LOG AQUI:
+    console.log("=== TESTE START SCREEN MOUNTED ===");
+    console.log("O que tem dentro de usuarioDados?", this.usuarioDados);
+
+    if (this.usuarioDados && this.usuarioDados.tipoUsuario === 'professor' && this.usuarioDados.codigoTurma) {
+      this.codigoTurma = this.usuarioDados.codigoTurma;
+      this.mostrarModalCodigo = true;
+    }
+  },
+
   methods: {
     openIntro() {
       this.$emit('open-intro');
@@ -64,7 +97,7 @@ export default {
 <style scoped>
 /* UNIFICADO: Container principal */
 .start-screen {
-  position: relative; /* ESSENCIAL para o botão absolute funcionar */
+  position: relative;
   width: 100vw;
   min-height: 100vh;
   display: flex;
@@ -79,7 +112,7 @@ export default {
   background-repeat: no-repeat;
   background-attachment: fixed;
   
-  padding-top: 80px; /* Aumentado para o título não bater no botão */
+  padding-top: 80px;
   padding-bottom: 50px;
   box-sizing: border-box;
   font-family: 'Evogria', sans-serif;
@@ -90,7 +123,7 @@ export default {
   position: absolute; 
   top: 20px;          
   right: 20px;        
-  z-index: 100; /* Garante que fique acima de tudo */
+  z-index: 100;
 }
 
 .btn-finalizar-topo {
@@ -111,7 +144,6 @@ export default {
   transform: scale(1.1);
 }
 
-/* RESTANTE DOS ESTILOS (Títulos, Recordes, etc) */
 .titulo-texto { color: white; font-size: 2rem; margin-bottom: 20px; }
 .titulo-img { max-width: 40%; min-width: 200px; object-fit: contain; }
 .start-screen p { color: white; margin-bottom: 20px; font-size: 1.5rem; }
@@ -137,8 +169,7 @@ export default {
   font-family: 'Evogria', sans-serif;
   border-radius: 12px;
 }
-/* Seção de recordes atualizada */
-/* Seção de recordes */
+
 .records {
   margin-top: 30px;
   padding: 20px;
@@ -159,6 +190,87 @@ export default {
   margin: 5px 0;
   font-size: 1.1rem;
   color: #ff69b4;
+}
+
+/* ==========================================
+   CSS DO AVISO ADICIONADO PARA A PROFESSORA
+   ========================================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+}
+
+.victory-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+  font-family: 'Evogria', sans-serif;
+  color: #050125;
+  width: min(460px, 90%);
+}
+
+.victory-modal h2 {
+  font-size: 1.8rem;
+  margin-bottom: 15px;
+  color: #ff1493;
+}
+
+.victory-modal p {
+  color: #333;
+  font-family: sans-serif;
+  margin-bottom: 20px;
+}
+
+.code-box {
+  background: #f1f3f9;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 2px dashed #ff69b4;
+}
+
+.generated-code {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #1f1a3a;
+  display: block;
+  letter-spacing: 2px;
+  margin: 10px 0;
+}
+
+.instruction {
+  font-size: 0.85rem;
+  color: #666 !important;
+  margin-bottom: 0 !important;
+}
+
+.btn-confirm {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  color: white;
+  border-radius: 12px;
+  border: none;
+  font-family: 'Evogria', sans-serif;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 20, 147, 0.3);
+}
+
+.btn-confirm:hover {
+  transform: translateY(-2px);
 }
 </style>
 

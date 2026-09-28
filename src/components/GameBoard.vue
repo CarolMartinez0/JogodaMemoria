@@ -1,5 +1,6 @@
 <template>
   <div class="game-board">
+    
     <div v-if="!venceu">
       <button class="voltar" @click="$emit('go-back')">Voltar</button>
       
@@ -8,31 +9,32 @@
       </div>
 
       <div class="grid" :class="dificuldade">
-        <Card
-          v-for="c in cartas"
-          :key="c.id"
-          :carta="c"
-          @click="virarCarta(c)"
-        />
-      </div>
-    </div>
-
-    <div v-else class="victory">
+        <div v-for="c in cartas" :key="c.id" class="card-wrapper">
+          <Card
+            :carta="c"
+            @click="virarCarta(c)"
+          />
+        </div> </div> </div> <div v-else class="victory">
       <h2>🎉 Parabéns! Você venceu!</h2>
       <p>Jogadas: {{ moves }}</p>
       <p>Pontuação: {{ pontuacao }}</p>
 
       <hr>
-      <div class="ranking-form">
-        <button class="voltar" @click="$emit('ver-ranking')">
-          Ver Ranking Global
-        </button>
-      </div>
+     <div class="ranking-form">
+  <button class="voltar" @click="$emit('ver-ranking', 'turma')">
+      Ver Ranking da Turma
+  </button>
+  
+  <button class="voltar" @click="$emit('ver-ranking', 'geral')">
+      Ver Ranking das Turmas
+  </button>
+</div>
 
       <hr>
       <button class="voltar" @click="startGame">Jogar novamente</button>
       <button class="voltar" @click="$emit('go-back')">Sair</button>
     </div>
+
   </div>
 </template>
 
@@ -43,6 +45,7 @@ import { db } from '../firebase';
 import { analytics } from '../firebase.js'; // Cuidado com o caminho (../)
 import { logEvent } from "firebase/analytics";
 import { collection,doc, setDoc,updateDoc } from 'firebase/firestore';
+import confetti from 'canvas-confetti';
 export default {
   components: { Card },
   // Adicionamos "usuarioDados" aqui para receber o nome e a escola do App.vue
@@ -164,55 +167,69 @@ export default {
       }
     },
 async vitoria() {
+  // 🌟 Importante: Calcula a pontuação logo no início para salvar o valor correto!
+  this.pontuacao = Math.max(1000 - this.moves * 20, 0);
+  
+  confetti({
+    particleCount: 150,
+    spread: 80,
+    origin: { y: 0.6 } // Dispara um pouquinho abaixo do meio da tela
+  });
+
   logEvent(analytics, 'vitoria_jogo', {
     dificuldade: this.dificuldade, // Qual nível ela venceu
     pontuacao: this.pontuacao,     // Quantos pontos fez
     projeto: "Mulheres na TI"
   });
-      console.log("🚀 A função vitoria começou!");
-      this.venceu = true;
-      this.pontuacao = Math.max(1000 - this.moves * 20, 0);
+  
+  console.log("🚀 A função vitoria começou!");
+  this.venceu = true;
 
-      if (this.usuarioDados && this.usuarioDados.uid) {
-        try {
-          // 1. Ranking Global
-          const rankingId = `${this.usuarioDados.uid}_${this.dificuldade}`;
-          await setDoc(doc(db, "ranking", rankingId), {
-            nome: this.usuarioDados.nome,
-            pontuacao: this.pontuacao,
-            escola: this.usuarioDados.escola,
-            dificuldade: this.dificuldade,
-            data: new Date()
-          }, { merge: true });
-          console.log("✅ Ranking Global OK");
-
-          // 2. Recorde Pessoal
-          const jogadorRef = doc(db, "jogadores", this.usuarioDados.uid);
-          const recordeAtual = Number(this.usuarioDados.recordes?.[this.dificuldade] || 0);
-
-          if (this.pontuacao > recordeAtual) {
-            await updateDoc(jogadorRef, {
-              [`recordes.${this.dificuldade}`]: this.pontuacao
-            });
-            
-            // Atualização local reativa (IMPORTANTE)
-            this.usuarioDados.recordes = {
-              ...this.usuarioDados.recordes,
-              [this.dificuldade]: this.pontuacao
-            };
-            console.log("Novo valor local:", this.usuarioDados.recordes[this.dificuldade]);
-            console.log("✅ Recorde Pessoal Salvo!");
-            this.$emit('vitoria', this.usuarioDados);
-          } else {
-            console.log("ℹ️ Pontuação não superou recorde.");
-          }
-        } catch (error) {
-          console.error("❌ Erro no Firebase:", error);
-        }
+  if (this.usuarioDados && this.usuarioDados.uid) {
+    try {
+      // 1. Ranking Global - 🌟 SÓ ENVIA SE O CHECKBOX ESTIVER ATIVO!
+      if (this.usuarioDados.participarRanking === true) {
+        const rankingId = `${this.usuarioDados.uid}_${this.dificuldade}`;
+        await setDoc(doc(db, "ranking", rankingId), {
+          nome: this.usuarioDados.nome,
+          escola: this.usuarioDados.escola,
+          pontuacao: this.pontuacao,
+          dificuldade: this.dificuldade,
+          codigoTurmaVinculado: this.usuarioDados.codigoTurmaVinculado || this.usuarioDados.codigoTurma || '',
+          data: new Date()
+        }, { merge: true });
+        console.log("✅ Ranking Global OK");
       } else {
-        console.error("⛔ Usuário não identificado para salvar recorde.");
+        console.log("🛑 GameBoard: Ignorando envio para o ranking pois o usuário não quer participar.");
       }
+
+      // 2. Recorde Pessoal (Sempre roda independente do ranking, para o aluno ver o próprio histórico)
+      const jogadorRef = doc(db, "jogadores", this.usuarioDados.uid);
+      const recordeAtual = Number(this.usuarioDados.recordes?.[this.dificuldade] || 0);
+
+      if (this.pontuacao > recordeAtual) {
+        await updateDoc(jogadorRef, {
+          [`recordes.${this.dificuldade}`]: this.pontuacao
+        });
+        
+        // Atualização local reativa (IMPORTANTE)
+        this.usuarioDados.recordes = {
+          ...this.usuarioDados.recordes,
+          [this.dificuldade]: this.pontuacao
+        };
+        console.log("Novo valor local:", this.usuarioDados.recordes[this.dificuldade]);
+        console.log("✅ Recorde Pessoal Salvo!");
+        this.$emit('vitoria', this.usuarioDados);
+      } else {
+        console.log("ℹ️ Pontuação não superou recorde.");
+      }
+    } catch (error) {
+      console.error("❌ Erro no Firebase:", error);
     }
+  } else {
+    console.error("⛔ Usuário não identificado para salvar recorde.");
+  }
+}
   } // fecha methods
 }; // fecha export default
 </script>
@@ -268,12 +285,46 @@ async vitoria() {
 }
 
 /* TELAS MÉDIAS (tablets) */
-@media (min-width: 600px) {
+/* ==========================================
+   2. ESPECIALIZAÇÃO: CELULAR (Telas pequenas)
+   ========================================== */
+@media (max-width: 600px) {
   .grid {
-    column-gap: 70px; /* Mantém a distância lateral que você gostou */
-  row-gap: 40px;
+    grid-template-columns: repeat(2, 1fr); 
+    justify-content: center;
+    width: 100%;
+    max-width: 360px; 
+    margin: 0 auto; 
+    padding: 10px;
+
+    column-gap: 20px; 
+    row-gap: 30px; 
   }
-} 
+
+  /* 🛡️ Ajustando a caixinha para não cortar o conteúdo */
+  .card-wrapper {
+    width: 100%;           /* Ocupa a largura da coluna */
+    max-width: 130px;      /* Define um limite seguro de largura para celular */
+    aspect-ratio: 2 / 3;   /* Força a proporção do retângulo magro */
+    margin: 0 auto;
+    position: relative;
+    /* ❌ Tiramos o overflow: hidden para não podar os textos! */
+  }
+
+  /* 🌟 O SEGREDO: Caça a imagem e o conteúdo lá dentro e obriga a encolher */
+  .card-wrapper :deep(img),
+  .card-wrapper :deep(.card),
+  .card-wrapper > * {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    
+    /* 🔥 Garante que a imagem se ajuste inteira dentro do retângulo, sem sumir com as bordas */
+    object-fit: contain !important; 
+  }
+}
+
 
 /* COMPUTADOR — cartas maiores */
 @media (min-width: 1000px) {
@@ -317,6 +368,16 @@ async vitoria() {
   transform: scale(1.05);
 }
 </style>
+
+
+
+
+
+
+
+
+
+
 
 
 

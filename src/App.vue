@@ -24,9 +24,10 @@
        
         <Ranking 
           v-else-if="exibindoRanking" 
-          @go-back="voltarMenu" 
+          :usuarioDados="usuarioDados" 
+          :aba-inicial="abaInicialRanking" @go-back="voltarMenu"
           key="ranking" 
-        />
+         />
 
 
 <StartScreen 
@@ -45,7 +46,7 @@
   :usuarioDados="usuarioDados" 
   @go-back="voltarMenu" 
   @vitoria="atualizarDadosUsuario"
-  @ver-ranking="abrirRanking"
+  @ver-ranking="abaInicialRanking = $event; exibindoRanking = true; jogoIniciado = false;"
   key="game" 
 />
 
@@ -80,6 +81,8 @@ export default {
       exibindoIntro: false,
       jogoIniciado: false,
       exibindoRanking: false,
+      abaInicialRanking: 'geral',
+      telaAtual: 'menu',
       dificuldade: 'facil',
       usuarioDados: {
         nome: '',
@@ -97,9 +100,9 @@ export default {
       escolas: ['Escola A', 'Escola B', 'Escola C', 'Escola D', 'Escola E']
     }
   },
- async created() {
-    await auth.signOut(); // Adicione isso aqui, salve, e depois que testar, apague.
-  this.carregando = true;
+async created() {
+    this.carregando = true;
+    
     // O onAuthStateChanged fica vigiando se o usuário está logado ou não
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -128,12 +131,15 @@ export default {
       this.carregando = false; 
     });
   },
-
 methods: {
   // ESSA É A FUNÇÃO QUE ESTÁ FALTANDO:
     onLoginSucesso(dados) {
-      this.usuarioDados = dados;
+      // Cria um objeto limpo espalhando os dados recebidos do cadastro
+      this.usuarioDados = { ...dados };
       this.usuarioLogado = true;
+      
+      console.log("=== APP.VUE: ENVIANDO PARA START SCREEN ===", this.usuarioDados);
+      
       // Aproveite para avisar ao Google que alguém logou/cadastrou!
       logEvent(analytics, 'login_sucesso');
     },
@@ -154,6 +160,7 @@ methods: {
       this.jogoIniciado = false;
       this.exibindoRanking = false;
       this.exibindoIntro = false;
+      this.abaInicialRanking = 'geral';
     },
 
     abrirRanking() {
@@ -163,20 +170,59 @@ methods: {
     },
 
     // 3. Quando o usuário vence (recebe o evento do GameBoard)
-    atualizarDadosUsuario(novosDados) {
+    // 3. Quando o usuário vence (recebe o evento do GameBoard)
+    async atualizarDadosUsuario(novosDados) {
       console.log("App.vue atualizando recordes:", novosDados.recordes);
       this.usuarioDados = { ...novosDados }; 
       
-      // Rastreia a vitória aqui também se preferir
       logEvent(analytics, 'vitoria_confirmada');
+
+      // 🌟 TRAVA DO CHECKBOX AQUI: Só envia para a coleção "ranking" se o usuário aceitou!
+      if (this.usuarioDados.participarRanking === true) {
+        try {
+          // Nota: Você já deve ter uma lógica de addDoc ou setDoc importada do firebase.
+          // Certifique-se de que ela use esses campos para salvar os pontos de forma correta:
+          console.log("🚀 Enviando pontuação para o ranking público pois o checkbox está ATIVO.");
+          
+          /* 
+          A sua função que salva no Firebase (se estiver aqui dentro ou no GameBoard) 
+          deve seguir essa estrutura para respeitar o seu botão:
+          
+          await addDoc(collection(db, "ranking"), {
+            nome: this.usuarioDados.nome,
+            pontuacao: novosDados.ultimaPontuacao, // ou a variável de pontos que você usa
+            dificuldade: this.dificuldade,
+            escola: this.usuarioDados.escola,
+            codigoTurmaVinculado: this.usuarioDados.codigoTurmaVinculado,
+            nomeTurma: this.usuarioDados.nomeTurma
+          });
+          */
+
+        } catch (error) {
+          console.error("Erro ao salvar no ranking:", error);
+        }
+      } else {
+        console.log("🛑 Pontuação NÃO enviada para o ranking. O usuário escolheu não participar.");
+      }
     },
 
-    async sairDaConta() {
+   async sairDaConta() {
       await auth.signOut();
       this.usuarioLogado = false;
-      this.usuarioDados = { nome: '', escola: '', participarRanking: false };
+      
+      // Reinicializa o usuário mantendo a estrutura dos recordes intacta e zerada!
+      this.usuarioDados = { 
+        nome: '', 
+        escola: '', 
+        participarRanking: false,
+        recordes: { 
+          facil: 0, 
+          medio: 0, 
+          dificil: 0 
+   } 
+      };
     }
-  }
+  } 
 };
 </script>
 
