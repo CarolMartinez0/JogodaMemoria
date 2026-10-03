@@ -54,7 +54,6 @@ export default {
 
   data() {
     return {
-      // Variáveis para controlar a exibição do aviso
       mostrarModalCodigo: false,
       codigoTurma: ""
     };
@@ -72,8 +71,7 @@ export default {
     }
   },
 
-mounted() {
-    // 🔍 ADICIONE ESTE LOG AQUI:
+  mounted() {
     console.log("=== TESTE START SCREEN MOUNTED ===");
     console.log("O que tem dentro de usuarioDados?", this.usuarioDados);
 
@@ -95,7 +93,6 @@ mounted() {
 </script>
 
 <style scoped>
-/* UNIFICADO: Container principal */
 .start-screen {
   position: relative;
   width: 100vw;
@@ -118,7 +115,7 @@ mounted() {
   font-family: 'Evogria', sans-serif;
 }
 
-/* POSICIONAMENTO DO BOTÃO */
+/* POSICIONAMENTO DO BOTÃO DE FECHAR */
 .header-actions {
   position: absolute; 
   top: 20px;          
@@ -141,60 +138,93 @@ mounted() {
 
 .btn-finalizar-topo:hover {
   background-color: #c0392b;
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
 .titulo-texto { color: white; font-size: 2rem; margin-bottom: 20px; }
 .titulo-img { max-width: 40%; min-width: 200px; object-fit: contain; }
-.start-screen p { color: white; margin-bottom: 20px; font-size: 1.5rem; }
+.start-screen p { color: white; margin-bottom: 16px; font-size: 1.4rem; }
 
-.buttons button {
-  margin: 10px;
-  padding: 14px 28px;
-  font-size: 1.3rem;
-  cursor: pointer;
-  border: none;
-  border-radius: 10px;
-  background-color: #ff69b4;
-  color: white;
-  font-family: 'Evogria', sans-serif;
+/* BOTÃO DE INTRODUÇÃO COM BRILHO BRANCO E LETRAS PRETAS */
+.intro-section {
+  margin-bottom: 24px;
+  width: min(90%, 480px);
 }
 
 .intro-button {
-  padding: 18px 36px;
-  font-size: 1.5rem;
-  border: 2px solid white;
-  background-color: rgba(255,255,255,0.9);
-  color: #333;
+  width: 100%;
+  padding: 18px 24px;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #100b21; /* Letras em preto/escuro */
+  background: linear-gradient(135deg, #ff73c7, #ff3b9d); /* Rosa vibrante */
+  border: 2px solid #ffffff; /* Borda branca */
+  border-radius: 16px;
+  cursor: pointer;
   font-family: 'Evogria', sans-serif;
-  border-radius: 12px;
+  transition: all 0.3s ease;
+  /* Efeito de brilho ao redor */
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 25px rgba(255, 105, 180, 0.6);
 }
 
-.records {
-  margin-top: 30px;
-  padding: 20px;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+.intro-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 35px rgba(255, 105, 180, 0.9);
+}
+
+/* BOTÕES DAS FASES EMPILHADOS E LARGOS */
+.buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(90%, 380px);
+  margin-bottom: 20px;
+}
+
+.buttons button {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #ff69b4, #ff1493);
+  color: white;
   font-family: 'Evogria', sans-serif;
-  color: #646363;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.buttons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 20, 147, 0.4);
+}
+
+/* RECORDES */
+.records {
+  margin-top: 15px;
+  padding: 20px;
+  width: min(90%, 380px);
+  background-color: rgba(255, 255, 255, 0.92);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-family: 'Evogria', sans-serif;
+  box-sizing: border-box;
 }
 
 .records h3 {
   margin-top: 0;
-  font-size: 1.5rem;
-  color: #ff69b4;
+  font-size: 1.4rem;
+  color: #ff1493;
 }
 
 .records p {
-  margin: 5px 0;
-  font-size: 1.1rem;
-  color: #ff69b4;
+  margin: 6px 0;
+  font-size: 1.05rem;
+  color: #333;
 }
 
-/* ==========================================
-   CSS DO AVISO ADICIONADO PARA A PROFESSORA
-   ========================================== */
+/* MODAL DA PROFESSORA */
 .modal-overlay {
   position: fixed;
   top: 0;

@@ -4,12 +4,15 @@
       <h1>Acesso ao Jogo</h1>
       <img class="card-logo" src="/img/ElasTI/logo.png" alt="Logo" />
 
-      <!-- PASSO 1: BOTÕES DE ESCOLHA INICIAL -->
+      <!-- PASSO 1: BOTOES DE ESCOLHA INICIAL -->
       <div class="mode-selector" v-if="!modoAcesso">
+        <p class="instruction-text">Escolha uma opção para começar.</p>
+
         <button 
           type="button" 
           class="btn-mode btn-cadastro" 
           @click="selecionarModo('cadastro')"
+          :disabled="loading"
         >
           Fazer Cadastro
         </button>
@@ -17,44 +20,42 @@
         <button 
           type="button" 
           class="btn-mode btn-visitante" 
-          @click="selecionarModo('visitante')"
+          @click="entrarDiretoComoVisitante"
+          :disabled="loading"
         >
-          Entrar como Visitante
+          {{ loading ? 'Entrando...' : 'Entrar como Visitante' }}
         </button>
       </div>
 
-      <!-- PASSO 2: FORMULÁRIO EXIBIDO APÓS ESCOLHER O MODO -->
+      <!-- PASSO 2: FORMULARIO EXIBIDO APENAS SE ESCOLHER "CADASTRO" -->
       <form v-else @submit.prevent="submitForm">
         
         <div class="form-header">
-          <h2>{{ modoAcesso === 'cadastro' ? 'Cadastro' : 'Acesso Visitante' }}</h2>
+          <h2>Cadastro</h2>
           <button type="button" class="btn-change-mode" @click="resetarModo">
             ← Trocar opção
           </button>
         </div>
 
-        <!-- SUB-OPÇÕES SE ESCOLHER "FAZER CADASTRO" -->
-        <template v-if="modoAcesso === 'cadastro'">
-          <label>
-            Tipo de Cadastro
-            <select class="field-control" v-model="tipoUsuario" @change="limparSubCampos" required>
-              <option value="aluno">Aluno(a)</option>
-              <option value="responsavel">Responsável</option>
-            </select>
-          </label>
+        <label>
+          Tipo de Cadastro
+          <select class="field-control" v-model="tipoUsuario" @change="limparSubCampos" required>
+            <option value="aluno">Aluno(a)</option>
+            <option value="responsavel">Responsável</option>
+          </select>
+        </label>
 
-          <!-- CAMPO DE ANO ESCOLAR COMO TEXTO LIVRE -->
-          <label v-if="tipoUsuario === 'aluno'">
-            Ano Escolar
-            <input 
-              class="field-control" 
-              type="text" 
-              v-model="anoEscolar" 
-              placeholder="Ex: 7º Ano, 3º Ano do Ensino Médio..." 
-              required 
-            />
-          </label>
-        </template>
+        <!-- CAMPO DE ANO ESCOLAR COMO TEXTO LIVRE -->
+        <label v-if="tipoUsuario === 'aluno'">
+          Ano Escolar
+          <input 
+            class="field-control" 
+            type="text" 
+            v-model="anoEscolar" 
+            placeholder="Ex: 7º Ano, 3º Ano do Ensino Médio..." 
+            required 
+          />
+        </label>
 
         <!-- NOME SEMPRE SORTEADO -->
         <label>
@@ -90,7 +91,7 @@
         </div>
 
         <button type="submit" class="btn-submit" :disabled="loading || !nome">
-          {{ loading ? 'Enviando...' : (modoAcesso === 'visitante' ? 'Entrar no Jogo' : 'Finalizar cadastro') }}
+          {{ loading ? 'Enviando...' : 'Finalizar cadastro' }}
         </button>
       </form>
 
@@ -109,7 +110,7 @@ export default {
   emits: ["login-sucesso"],
   data() {
     return {
-      modoAcesso: "", // '' (nenhum selecionado), 'visitante' ou 'cadastro'
+      modoAcesso: "", // '' (nenhum selecionado) ou 'cadastro'
       tipoUsuario: "aluno", // 'aluno' ou 'responsavel'
       nome: "",
       nomeGerado: false,
@@ -145,13 +146,42 @@ export default {
       this.error = "";
       this.sortearNome();
     },
+    // Método direto para visitantes
+    async entrarDiretoComoVisitante() {
+      this.error = "";
+      this.loading = true;
+
+      const dadosVisitante = {
+        nome: "Visitante",
+        modoAcesso: "visitante",
+        tipoUsuario: "visitante",
+        participarRanking: false, // 🚫 Nunca participa do ranking
+        pontuacaoMaxima: 0,
+        recordes: {
+          facil: 0,
+          medio: 0,
+          dificil: 0
+        }
+      };
+
+      try {
+        console.log("=== ENTRANDO COMO VISITANTE ===", dadosVisitante);
+        const usuarioRegistrado = await registerUser(dadosVisitante);
+        this.$emit("login-sucesso", usuarioRegistrado);
+      } catch (err) {
+        console.error("Erro no acesso como visitante:", err);
+        this.error = err.message || "Não foi possível entrar como visitante.";
+      } finally {
+        this.loading = false;
+      }
+    },
     async submitForm() {
       if (!this.nome) {
         this.error = "Por favor, sorteie um nome de usuário.";
         return;
       }
 
-      if (this.modoAcesso === 'cadastro' && this.tipoUsuario === 'aluno' && !this.anoEscolar.trim()) {
+      if (this.tipoUsuario === 'aluno' && !this.anoEscolar.trim()) {
         this.error = "Por favor, digite seu ano escolar.";
         return;
       }
@@ -161,13 +191,13 @@ export default {
 
       let dadosCadastro = {
         nome: this.nome,
-        modoAcesso: this.modoAcesso,
-        tipoUsuario: this.modoAcesso === 'visitante' ? 'visitante' : this.tipoUsuario,
+        modoAcesso: "cadastro",
+        tipoUsuario: this.tipoUsuario,
         participarRanking: this.participarRanking,
         pontuacaoMaxima: 0
       };
 
-      if (this.modoAcesso === 'cadastro' && this.tipoUsuario === 'aluno') {
+      if (this.tipoUsuario === 'aluno') {
         dadosCadastro.anoEscolar = this.anoEscolar.trim();
       }
 
@@ -198,6 +228,13 @@ export default {
   gap: 12px;
   width: 100%;
   margin-bottom: 12px;
+}
+
+.instruction-text {
+  font-size: 1.05rem;
+  color: #ffb7e2;
+  margin: 0 0 6px 0;
+  font-family: inherit; 
 }
 
 .btn-mode {

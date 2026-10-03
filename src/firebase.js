@@ -37,37 +37,38 @@ export const analytics = getAnalytics(app);
  */
 export const registerUser = async (userData) => {
   try {
-    // Garante que o usuário está autenticado anonimamente
-    const userCredential = await signInAnonymously(auth);
-    const user = userCredential.user;
+    // 1. Garante que o usuário está autenticado anonimamente
+    let user = auth.currentUser;
+    if (!user) {
+      const userCredential = await signInAnonymously(auth);
+      user = userCredential.user;
+    }
 
     // Referência do documento na coleção 'jogadores'
     const playerRef = doc(db, "jogadores", user.uid);
     
-    // Dados base estruturados
-    const finalData = {
-      uid: user.uid,
+    // 2. Dados exatos exigidos pelas Security Rules do Firestore
+    const firestoreData = {
       nome: userData.nome,
       modoAcesso: userData.modoAcesso || 'cadastro',
       tipoUsuario: userData.tipoUsuario || 'visitante',
       participarRanking: userData.participarRanking ?? true,
-      recordes: {
-        facil: 0,
-        medio: 0,
-        dificil: 0
-      },
-      createdAt: serverTimestamp()
+      pontuacaoMaxima: 0 // 🔒 Obrigatoriamente inteiro 0 conforme a regra
     };
 
-    // Se for aluno em modo cadastro, salva o Ano Escolar livre
+    // Adiciona anoEscolar apenas se fornecido
     if (userData.tipoUsuario === 'aluno' && userData.anoEscolar) {
-      finalData.anoEscolar = userData.anoEscolar;
+      firestoreData.anoEscolar = userData.anoEscolar;
     }
 
-    // Salva o jogador no Firestore
-    await setDoc(playerRef, finalData);
+    // 3. Salva no Firestore
+    await setDoc(playerRef, firestoreData);
 
-    return finalData;
+    // 4. Retorna o objeto completo com o UID para o Vue utilizar em memória
+    return {
+      uid: user.uid,
+      ...firestoreData
+    };
 
   } catch (error) {
     console.error("Erro no processo de cadastro:", error);

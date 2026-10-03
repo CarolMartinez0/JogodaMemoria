@@ -11,7 +11,7 @@
         @click="dificuldadeSelecionada = nivel"
         :class="{ active: difficultySelected(nivel) }"
       >
-        {{ nivel.charAt(0).toUpperCase() + nivel.slice(1) }}
+        {{ nivel === 'facil' ? 'Fácil' : (nivel === 'medio' ? 'Médio' : 'Difícil') }}
       </button>
     </div>
 
@@ -37,11 +37,16 @@
         <tr 
           v-for="(item, index) in rankingExibido" 
           :key="item.id" 
-          :class="{'top3': index < 3}"
+          :class="{
+            'top3': index < 3,
+            'meu-perfil': ehUsuarioAtual(item)
+          }"
         >
           <td>{{ index + 1 }}º</td>
           <td class="nome-jogador">{{ item.nome }}</td>
-          <td>{{ item.anoEscolar || 'Visitante' }}</td>
+          <td>
+            {{ item.anoEscolar || (item.tipoUsuario === 'responsavel' ? 'Responsável' : 'Não informado') }}
+          </td>
           <td class="pontuacao">{{ item.pontuacao }} pts</td>
         </tr>
       </tbody>
@@ -69,13 +74,19 @@ export default {
     return {
       dificuldadeSelecionada: 'facil',
       listaRanking: [], 
-      carregando: false
+      carregando: false,
+      unsubscribe: null
     };
   },
   computed: {
     rankingExibido() {
-      // Ordena por pontuação do maior para o menor e pega os top 50
+      // Filtra e ordena reativamente pela dificuldade selecionada
       return [...this.listaRanking]
+        .map(item => ({
+          ...item,
+          pontuacao: item.recordes?.[this.dificuldadeSelecionada] ?? 0
+        }))
+        .filter(item => item.pontuacao > 0) // Exibe apenas quem jogou e pontuou nesta dificuldade
         .sort((a, b) => b.pontuacao - a.pontuacao)
         .slice(0, 50);
     }
@@ -84,15 +95,20 @@ export default {
     difficultySelected(nivel) {
       return this.dificuldadeSelecionada === nivel;
     },
-    buscarRanking(nivel) {
+    ehUsuarioAtual(item) {
+      if (!this.usuarioDados || !this.usuarioDados.uid) return false;
+      return item.id === this.usuarioDados.uid || item.uid === this.usuarioDados.uid;
+    },
+    iniciarEscutaRanking() {
       this.carregando = true;
-      
+
+      // Escuta a coleção 'jogadores' em tempo real apenas UMA vez no mounted
       const q = query(
-        collection(db, "ranking"),
-        where("dificuldade", "==", nivel)
+        collection(db, "jogadores"),
+        where("participarRanking", "==", true)
       );
 
-      onSnapshot(q, (snapshot) => {
+      this.unsubscribe = onSnapshot(q, (snapshot) => {
         this.listaRanking = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -104,13 +120,13 @@ export default {
       });
     }
   },
-  watch: {
-    dificuldadeSelecionada(novoNivel) {
-      this.buscarRanking(novoNivel);
-    }
-  },
   mounted() {
-    this.buscarRanking(this.dificuldadeSelecionada);
+    this.iniciarEscutaRanking();
+  },
+  unmounted() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
   }
 };
 </script>
@@ -204,6 +220,29 @@ td {
 
 .top3 {
   background: rgba(255, 105, 180, 0.12);
+}
+
+/* 🌟 DESTAQUE COM LUZ NAS BORDAS (Sem alterar a cor de fundo original da linha) */
+.meu-perfil {
+  position: relative;
+  z-index: 2;
+  /* Cria uma aura suave rosa em volta da linha */
+  box-shadow: 0 0 10px rgba(255, 105, 180, 0.6), inset 0 0 4px rgba(255, 105, 180, 0.3);
+}
+
+.meu-perfil td {
+  /* Bordas iluminadas topo e base */
+  border-top: 2px solid #ff69b4;
+  border-bottom: 2px solid #ff69b4;
+}
+
+/* Garante o contorno de brilho nas pontas da tabela */
+.meu-perfil td:first-child {
+  border-left: 2px solid #ff69b4;
+}
+
+.meu-perfil td:last-child {
+  border-right: 2px solid #ff69b4;
 }
 
 .acoes {

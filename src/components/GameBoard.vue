@@ -1,6 +1,21 @@
 <template>
   <div class="game-board">
     
+    <!-- 🌟 POP-UP DE AVISO (APARECE APENAS NO MÉDIO E DIFÍCIL) -->
+    <div v-if="exibirAviso" class="modal-overlay">
+      <div class="modal-content">
+        <h3>💡 Dica de Jogo</h3>
+        <p>
+          Nos níveis com história, as cartas trazem informações sobre a trajetória de grandes mulheres da computação.
+        </p>
+        <p>
+          Para ajudar nas partidas, você pode voltar à tela inicial e clicar em <strong>"CONHEÇA AS MULHERES NA COMPUTAÇÃO"</strong> para ler os perfis antes de jogar!
+        </p>
+        <button class="voltar" @click="fecharAviso">Entendi, vamos jogar!</button>
+      </div>
+    </div>
+
+    <!-- TELA DE JOGO -->
     <div v-if="!venceu">
       <button class="voltar" @click="$emit('go-back')">Voltar</button>
       
@@ -14,17 +29,22 @@
             :carta="c"
             @click="virarCarta(c)"
           />
-        </div> </div> </div> <div v-else class="victory">
+        </div> 
+      </div> 
+    </div> 
+
+    <!-- TELA DE VITÓRIA -->
+    <div v-else class="victory">
       <h2>🎉 Parabéns! Você venceu!</h2>
       <p>Jogadas: {{ moves }}</p>
       <p>Pontuação: {{ pontuacao }}</p>
 
       <hr>
-   <div class="ranking-form">
-  <button class="voltar" @click="$emit('ver-ranking')">
-    🏆 Ver Ranking Geral
-  </button>
-</div>
+      <div class="ranking-form">
+        <button class="voltar" @click="$emit('ver-ranking')">
+          🏆 Ver Ranking Geral
+        </button>
+      </div>
 
       <hr>
       <button class="voltar" @click="startGame">Jogar novamente</button>
@@ -36,27 +56,27 @@
 
 <script>
 import Card from "./Card.vue";
-import women from '../data/women.json'
-import { db } from '../firebase'; 
-import { analytics } from '../firebase.js'; // Cuidado com o caminho (../)
+import women from '../data/women.json';
+import { db, auth, analytics } from '../firebase.js'; // 🔧 'auth' importado corretamente
 import { logEvent } from "firebase/analytics";
-import { collection,doc, setDoc,updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import confetti from 'canvas-confetti';
+
 export default {
   components: { Card },
-  // Adicionamos "usuarioDados" aqui para receber o nome e a escola do App.vue
   props: ["imagens", "dificuldade", "usuarioDados"],
 
- data() {
-  return {
-    cartas: [],
-    selecionadas: [],
-    moves: 0,
-    venceu: false,
-    pontuacao: 0,
-    travado: false // <-- impede cliques rápidos
-  };
-},
+  data() {
+    return {
+      cartas: [],
+      selecionadas: [],
+      moves: 0,
+      venceu: false,
+      pontuacao: 0,
+      travado: false,
+      exibirAviso: false
+    };
+  },
 
   created() {
     console.log("📡 GameBoard Criado! Dados recebidos do App.vue:", this.usuarioDados);
@@ -70,17 +90,24 @@ export default {
       this.pontuacao = 0;
       this.selecionadas = [];
 
+      // Exibe o aviso apenas se for o modo completo (médio ou difícil) e o jogador ainda não leu nesta sessão
+      const jaViuAviso = sessionStorage.getItem('avisoSaberMaisVisto');
+      if ((this.dificuldade === "medio" || this.dificuldade === "dificil") && !jaViuAviso) {
+        this.exibirAviso = true;
+      } else {
+        this.exibirAviso = false;
+      }
+
       let numPares = 4;
       if (this.dificuldade === "medio") numPares = 6;
       if (this.dificuldade === "dificil") numPares = 8;
 
-      // Criar pares corretos: [pessoa, texto]
+      // Criar pares originais: [pessoa, texto]
       const todosPares = [];
       for (let i = 0; i < this.imagens.length; i += 2) {
         todosPares.push([this.imagens[i], this.imagens[i + 1]]);
       }
 
-      // Verificar se tem pares suficientes
       if (todosPares.length < numPares) {
         alert("Não há pares suficientes!");
         return;
@@ -92,7 +119,6 @@ export default {
         .sort(() => Math.random() - 0.5)
         .slice(0, numPares);
 
-      // Criar cartas
       let cartas = [];
       let valor = 1;
 
@@ -101,25 +127,49 @@ export default {
         const woman = women[idx];
         const [pessoa, texto] = par;
 
-        cartas.push({
-          id: cartas.length,
-          imagem: pessoa,
-          virada: false,
-          encontrada: false,
-          valor,
-          name: '',
-          importance: ''
-        });
+        // Fase fácil (apenas imagens): 2 cartas da foto da pessoa
+        if (this.dificuldade === "facil") {
+          cartas.push({
+            id: cartas.length,
+            imagem: pessoa,
+            virada: false,
+            encontrada: false,
+            valor,
+            name: '',
+            importance: ''
+          });
 
-        cartas.push({
-          id: cartas.length,
-          imagem: texto,
-          virada: false,
-          encontrada: false,
-          valor,
-          name: woman.nome,
-          importance: woman.importancia
-        });
+          cartas.push({
+            id: cartas.length,
+            imagem: pessoa,
+            virada: false,
+            encontrada: false,
+            valor,
+            name: '',
+            importance: ''
+          });
+        } else {
+          // Demais fases (médio e difícil): Par de [imagem + texto]
+          cartas.push({
+            id: cartas.length,
+            imagem: pessoa,
+            virada: false,
+            encontrada: false,
+            valor,
+            name: '',
+            importance: ''
+          });
+
+          cartas.push({
+            id: cartas.length,
+            imagem: texto,
+            virada: false,
+            encontrada: false,
+            valor,
+            name: woman.nome,
+            importance: woman.importancia
+          });
+        }
 
         valor++;
       });
@@ -128,23 +178,27 @@ export default {
       this.cartas = cartas.sort(() => Math.random() - 0.5);
     },
 
- virarCarta(carta) {
-  if (this.travado) return;              // 🔒 evita cliques enquanto espera
-  if (carta.virada || carta.encontrada) return;
-  if (this.selecionadas.length === 2) return;
+    fecharAviso() {
+      this.exibirAviso = false;
+      sessionStorage.setItem('avisoSaberMaisVisto', 'true');
+    },
 
-  carta.virada = true;
-  this.selecionadas.push(carta);
+    virarCarta(carta) {
+      if (this.travado) return;
+      if (carta.virada || carta.encontrada) return;
+      if (this.selecionadas.length === 2) return;
 
-  if (this.selecionadas.length === 2) {
-    this.moves++; 
-    this.travado = true;                 // 🔒 trava o jogo
-    setTimeout(() => this.verificarPar(), 900); // Delay maior p/ celular
-  }
-},
+      carta.virada = true;
+      this.selecionadas.push(carta);
 
+      if (this.selecionadas.length === 2) {
+        this.moves++; 
+        this.travado = true;
+        setTimeout(() => this.verificarPar(), 900);
+      }
+    },
 
-   verificarPar() {
+    verificarPar() {
       const [c1, c2] = this.selecionadas;
 
       if (c1.valor === c2.valor) {
@@ -162,78 +216,85 @@ export default {
         this.vitoria();
       }
     },
-async vitoria() {
-  // 🌟 Importante: Calcula a pontuação logo no início para salvar o valor correto!
+
+    async vitoria() {
   this.pontuacao = Math.max(1000 - this.moves * 20, 0);
   
   confetti({
     particleCount: 150,
     spread: 80,
-    origin: { y: 0.6 } // Dispara um pouquinho abaixo do meio da tela
+    origin: { y: 0.6 }
   });
 
   logEvent(analytics, 'vitoria_jogo', {
-    dificuldade: this.dificuldade, // Qual nível ela venceu
-    pontuacao: this.pontuacao,     // Quantos pontos fez
+    dificuldade: this.dificuldade,
+    pontuacao: this.pontuacao,
     projeto: "Mulheres na TI"
   });
   
   console.log("🚀 A função vitoria começou!");
   this.venceu = true;
 
-  if (this.usuarioDados && this.usuarioDados.uid) {
-    try {
-      // 1. Ranking Global - 🌟 SÓ ENVIA SE O CHECKBOX ESTIVER ATIVO!
-      if (this.usuarioDados.participarRanking === true) {
-        const rankingId = `${this.usuarioDados.uid}_${this.dificuldade}`;
-        await setDoc(doc(db, "ranking", rankingId), {
-          nome: this.usuarioDados.nome,
-          anoEscolar: this.usuarioDados.anoEscolar || 'Visitante',
-          pontuacao: this.pontuacao,
-          dificuldade: this.dificuldade,
-          codigoTurmaVinculado: this.usuarioDados.codigoTurmaVinculado || this.usuarioDados.codigoTurma || '',
-          data: new Date()
-        }, { merge: true });
-        console.log("✅ Ranking Global OK");
-      } else {
-        console.log("🛑 GameBoard: Ignorando envio para o ranking pois o usuário não quer participar.");
-      }
+  // 1. Pega o usuário logado no Firebase Auth ou props
+  const currentUser = auth.currentUser;
+  const uid = this.usuarioDados?.uid || currentUser?.uid;
 
-      // 2. Recorde Pessoal (Sempre roda independente do ranking, para o aluno ver o próprio histórico)
-      const jogadorRef = doc(db, "jogadores", this.usuarioDados.uid);
-      const recordeAtual = Number(this.usuarioDados.recordes?.[this.dificuldade] || 0);
+  // 2. Se for Visitante ou optou por não participar do ranking, interrompe o salvamento no Firestore
+  if (this.usuarioDados?.modoAcesso === 'visitante' || this.usuarioDados?.participarRanking === false) {
+    console.log("ℹ️ Jogador em modo Visitante ou sem opção de ranking ativada. Pontuação não enviada ao banco.");
+    return;
+  }
 
-      if (this.pontuacao > recordeAtual) {
-        await updateDoc(jogadorRef, {
-          [`recordes.${this.dificuldade}`]: this.pontuacao
-        });
-        
-        // Atualização local reativa (IMPORTANTE)
-        this.usuarioDados.recordes = {
-          ...this.usuarioDados.recordes,
-          [this.dificuldade]: this.pontuacao
-        };
-        console.log("Novo valor local:", this.usuarioDados.recordes[this.dificuldade]);
-        console.log("✅ Recorde Pessoal Salvo!");
-        this.$emit('vitoria', this.usuarioDados);
-      } else {
-        console.log("ℹ️ Pontuação não superou recorde.");
-      }
-    } catch (error) {
-      console.error("❌ Erro no Firebase:", error);
-    }
-  } else {
+  if (!uid) {
     console.error("⛔ Usuário não identificado para salvar recorde.");
+    return;
+  }
+
+  try {
+    const jogadorRef = doc(db, "jogadores", uid);
+    
+    const pontuacaoAtualGeral = Number(this.usuarioDados?.pontuacaoMaxima || 0);
+    const novaPontuacaoMaxima = Math.max(pontuacaoAtualGeral, this.pontuacao);
+
+    // Busca o recorde atual específico desta dificuldade (ex: 'facil')
+    const pontuacaoAtualDificuldade = Number(this.usuarioDados?.recordes?.[this.dificuldade] || 0);
+    const novoRecordeDificuldade = Math.max(pontuacaoAtualDificuldade, this.pontuacao);
+
+    // Salva no Firestore apenas se superou o recorde anterior nesta dificuldade
+    if (this.pontuacao > pontuacaoAtualDificuldade) {
+      await updateDoc(jogadorRef, {
+        pontuacaoMaxima: novaPontuacaoMaxima,
+        [`recordes.${this.dificuldade}`]: novoRecordeDificuldade
+      });
+      console.log(`✅ Novo recorde na dificuldade [${this.dificuldade}] salvo no Firestore!`);
+    } else {
+      console.log("ℹ️ Pontuação não superou a pontuação máxima desta dificuldade.");
+    }
+
+    // Prepara e emite os dados atualizados para o App.vue em memória
+    const novosDadosUsuario = {
+      ...this.usuarioDados,
+      uid: uid,
+      pontuacaoMaxima: novaPontuacaoMaxima,
+      recordes: {
+        ...this.usuarioDados?.recordes,
+        [this.dificuldade]: novoRecordeDificuldade
+      }
+    };
+
+    this.$emit('vitoria', novosDadosUsuario);
+
+  } catch (error) {
+    console.error("❌ Erro no Firebase ao salvar recorde:", error);
   }
 }
-  } // fecha methods
-}; // fecha export default
+  }
+};
 </script>
 
-<style>
+<style scoped>
 .game-board {
   width: 100%;
-  /* 1. Mudamos para garantir que o fundo acompanhe o crescimento das cartas */
   min-height: 100vh; 
   height: auto; 
 
@@ -241,9 +302,7 @@ async vitoria() {
     linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)),
     url('/img/menu-fundo.jpg');
   
-  /* 2. O SEGREDO: Faz a imagem ficar fixa enquanto as cartas deslizam */
   background-attachment: fixed; 
-  
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -251,9 +310,58 @@ async vitoria() {
   padding: 20px;
   margin: 0 auto;
   font-family: 'Evogria', sans-serif;
-  
-  /* 3. SEGURANÇA: Adicione uma cor de fundo parecida com a sua imagem */
   background-color: #050125; 
+}
+
+/* Modal / Pop-up de Aviso */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal-content {
+  background: #ffffff;
+  color: #050125;
+  padding: 25px 30px;
+  border-radius: 15px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  animation: popIn 0.3s ease-out;
+}
+
+.modal-content h3 {
+  margin-top: 0;
+  font-size: 1.6rem;
+  color: #ff1493;
+}
+
+.modal-content p {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 15px 0;
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Informações */
@@ -265,25 +373,22 @@ async vitoria() {
   font-family: 'Evogria', sans-serif;
 }
 
-/* CELULAR — cartas pequenas */
+/* Grid das Cartas */
 .grid {
   display: grid;
-  justify-content: space-evenly; /* Centraliza o bloco de cartas na tela */
+  justify-content: space-evenly;
   align-content: center;
- grid-template-columns: repeat(auto-fit, minmax(70px, 160px));
+  grid-template-columns: repeat(auto-fit, minmax(70px, 160px));
   width: 95%; 
   max-width: 1000px;
-  column-gap: 30px; /* Mantém a distância lateral que você gostou */
-  row-gap: 40px; /* <--- AQUI: Aumente ou diminua este valor para afastar as cartas */
+  column-gap: 30px;
+  row-gap: 40px;
   padding: 20px;
   margin: 0 auto;
   border-radius: 8px;
 }
 
-/* TELAS MÉDIAS (tablets) */
-/* ==========================================
-   2. ESPECIALIZAÇÃO: CELULAR (Telas pequenas)
-   ========================================== */
+/* Responsividade Celular */
 @media (max-width: 600px) {
   .grid {
     grid-template-columns: repeat(2, 1fr); 
@@ -292,22 +397,18 @@ async vitoria() {
     max-width: 360px; 
     margin: 0 auto; 
     padding: 10px;
-
     column-gap: 20px; 
     row-gap: 30px; 
   }
 
-  /* 🛡️ Ajustando a caixinha para não cortar o conteúdo */
   .card-wrapper {
-    width: 100%;           /* Ocupa a largura da coluna */
-    max-width: 130px;      /* Define um limite seguro de largura para celular */
-    aspect-ratio: 2 / 3;   /* Força a proporção do retângulo magro */
+    width: 100%;
+    max-width: 130px;
+    aspect-ratio: 2 / 3;
     margin: 0 auto;
     position: relative;
-    /* ❌ Tiramos o overflow: hidden para não podar os textos! */
   }
 
-  /* 🌟 O SEGREDO: Caça a imagem e o conteúdo lá dentro e obriga a encolher */
   .card-wrapper :deep(img),
   .card-wrapper :deep(.card),
   .card-wrapper > * {
@@ -315,18 +416,15 @@ async vitoria() {
     height: 100% !important;
     max-width: 100% !important;
     max-height: 100% !important;
-    
-    /* 🔥 Garante que a imagem se ajuste inteira dentro do retângulo, sem sumir com as bordas */
     object-fit: contain !important; 
   }
 }
 
-
-/* COMPUTADOR — cartas maiores */
+/* Responsividade Computador */
 @media (min-width: 1000px) {
   .grid {
-   column-gap: 70px; /* Mantém a distância lateral que você gostou */
-  row-gap: 40px;
+    column-gap: 70px;
+    row-gap: 40px;
   }
 }
 
@@ -345,7 +443,7 @@ async vitoria() {
   color: #050125;
 }
 
-/* Botão voltar */
+/* Botões */
 .voltar {
   margin: 10px;
   padding: 12px 24px;
@@ -355,8 +453,8 @@ async vitoria() {
   cursor: pointer;
   background-color: rgba(255,255,255,0.85);
   transition: all 0.2s;
-  font-family: 'Evogria';
-  color:#050125;
+  font-family: 'Evogria', sans-serif;
+  color: #050125;
 }
 
 .voltar:hover {
@@ -365,22 +463,4 @@ async vitoria() {
 }
 </style>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  

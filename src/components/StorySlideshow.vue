@@ -17,7 +17,7 @@
     <div class="buttons">
       <button @click="previous" :disabled="currentIndex === 0" class="btn" aria-label="Slide anterior">Anterior</button>
       <button @click="next" :disabled="currentIndex === slides.length - 1" class="btn" aria-label="Próximo slide">Próximo</button>
-      <button @click="skip" class="btn skip" aria-label="Pular introdução">Pular</button>
+      <button @click="skip" class="btn" aria-label="Pular introdução">Pular</button>
     </div>
   </div>
 </template>
@@ -192,21 +192,10 @@ export default {
   justify-content: center;
 }
 
-/* Responsividade para botões */
-@media (max-width: 768px) {
-  .buttons {
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-  }
-
-  .btn {
-    width: 200px;
-  }
-}
-
 .btn {
   padding: 10px 20px;
+  min-width: 130px; /* Garante que todos os botões fiquem com a mesma largura mínima */
+  font-family: inherit; /* Mantém a fonte 'Evogria' nos botões */
   font-size: 1em;
   border: none;
   border-radius: 5px;
@@ -225,12 +214,17 @@ export default {
   cursor: not-allowed;
 }
 
-.skip {
-  background-color: #be356e;
-}
+/* Responsividade para botões */
+@media (max-width: 768px) {
+  .buttons {
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
 
-.skip:hover {
-  background-color: #ff91a4;
+  .btn {
+    width: 200px;
+  }
 }
 
 /* Transições suaves para os slides */

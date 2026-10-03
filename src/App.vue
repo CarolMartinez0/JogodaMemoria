@@ -1,59 +1,104 @@
-<template>
-  <div id="app">
-    <div v-if="carregando" class="start-screen">
-      <div class="records">
-         <p>Verificando autenticação...</p>
-      </div>
-    </div>
+ <template>
 
-   <RegistrationScreen 
-  v-else-if="!usuarioLogado" 
-  :escolas="escolas" 
-  @login-sucesso="onLoginSucesso" 
+<div id="app">
+
+<div v-if="carregando" class="start-screen">
+
+<div class="records">
+
+<p>Verificando autenticação...</p>
+
+</div>
+
+</div>
+
+
+<RegistrationScreen
+
+v-else-if="!usuarioLogado"
+
+:escolas="escolas"
+
+@login-sucesso="onLoginSucesso"
+
 />
 
-    <template v-else>
-      <transition name="page" mode="out-in">
-        
-        <StorySlideshow 
-          v-if="exibindoIntro" 
-          @close-intro="exibindoIntro = false" 
-          key="slideshow" 
-        />
 
-       
-        <Ranking 
-          v-else-if="exibindoRanking" 
-          :usuarioDados="usuarioDados" 
-          :aba-inicial="abaInicialRanking" @go-back="voltarMenu"
-          key="ranking" 
-         />
+<template v-else>
 
+<transition name="page" mode="out-in">
 
-<StartScreen 
-  v-else-if="!jogoIniciado" 
-  :usuarioDados="usuarioDados" 
-  @start-game="startGame" 
-  @open-intro="abrirIntro" 
-  @ver-ranking="abrirRanking"
-  @sair="sairDaConta"  key="start" 
+<StorySlideshow
+
+v-if="exibindoIntro"
+
+@close-intro="exibindoIntro = false"
+
+key="slideshow"
+
 />
 
-  <GameBoard 
-  v-else 
-  :imagens="imagens" 
-  :dificuldade="dificuldade" 
-  :usuarioDados="usuarioDados" 
-  @go-back="voltarMenu" 
-  @vitoria="atualizarDadosUsuario"
-  @ver-ranking="abaInicialRanking = $event; exibindoRanking = true; jogoIniciado = false;"
-  key="game" 
+
+<Ranking
+
+v-else-if="exibindoRanking"
+
+:usuarioDados="usuarioDados"
+
+:aba-inicial="abaInicialRanking" @go-back="voltarMenu"
+
+key="ranking"
+
 />
 
-      </transition>
-    </template>
-  </div>
+
+
+<StartScreen
+
+v-else-if="!jogoIniciado"
+
+:usuarioDados="usuarioDados"
+
+@start-game="startGame"
+
+@open-intro="abrirIntro"
+
+@ver-ranking="abrirRanking"
+
+@sair="sairDaConta" key="start"
+
+/>
+
+
+<GameBoard
+
+v-else
+
+:imagens="imagens"
+
+:dificuldade="dificuldade"
+
+:usuarioDados="usuarioDados"
+
+@go-back="voltarMenu"
+
+@vitoria="atualizarDadosUsuario"
+
+@ver-ranking="abaInicialRanking = $event; exibindoRanking = true; jogoIniciado = false;"
+
+key="game"
+
+/>
+
+
+</transition>
+
 </template>
+
+</div>
+
+</template>
+
 
 <script>
 import Ranking from './components/Ranking.vue';
@@ -61,9 +106,8 @@ import StartScreen from './components/StartScreen.vue';
 import GameBoard from './components/GameBoard.vue';
 import StorySlideshow from './components/StorySlideshow.vue';
 import RegistrationScreen from './components/RegistrationScreen.vue';
-import { auth, db } from './firebase.js'; 
+import { auth, db, analytics } from './firebase.js'; 
 import { doc, getDoc } from 'firebase/firestore';
-import { analytics } from './firebase.js'; 
 import { logEvent } from "firebase/analytics";
 
 export default {
@@ -85,9 +129,10 @@ export default {
       telaAtual: 'menu',
       dificuldade: 'facil',
       usuarioDados: {
+        uid: '',
         nome: '',
         escola: '',
-        recordes: { facil: 0, medio: 0, dificil: 0 }, // Garantindo que comece com recordes
+        pontuacaoMaxima: 0,
         participarRanking: false 
       },
       imagens: [
@@ -100,7 +145,7 @@ export default {
       escolas: ['Escola A', 'Escola B', 'Escola C', 'Escola D', 'Escola E']
     }
   },
-async created() {
+  async created() {
     this.carregando = true;
     
     // O onAuthStateChanged fica vigiando se o usuário está logado ou não
@@ -111,11 +156,13 @@ async created() {
           const docSnap = await getDoc(docRef);
           
           if (docSnap.exists()) {
-            // Se o usuário existe no banco, carrega os dados e entra
-            this.usuarioDados = docSnap.data();
+            // 🔧 CORREÇÃO 1: Injeta explicitamente o user.uid junto aos dados vindos do banco
+            this.usuarioDados = {
+              uid: user.uid,
+              ...docSnap.data()
+            };
             this.usuarioLogado = true; 
           } else {
-            // Se o usuário existe no login mas não tem dados no banco, desloga
             await auth.signOut();
             this.usuarioLogado = false;
           }
@@ -124,33 +171,33 @@ async created() {
           this.usuarioLogado = false;
         }
       } else {
-        // Se não tem ninguém logado, manda para a tela de registro
         this.usuarioLogado = false;
       }
-      // Avisa que terminou de checar o banco
       this.carregando = false; 
     });
   },
-methods: {
-  // ESSA É A FUNÇÃO QUE ESTÁ FALTANDO:
+  methods: {
     onLoginSucesso(dados) {
-      // Cria um objeto limpo espalhando os dados recebidos do cadastro
-      this.usuarioDados = { ...dados };
+      // 🔧 CORREÇÃO 2: Garante que o objeto mantido na memória inclua o uid
+      const uid = dados.uid || auth.currentUser?.uid || '';
+      
+      this.usuarioDados = {
+        uid: uid,
+        ...dados
+      };
       this.usuarioLogado = true;
       
       console.log("=== APP.VUE: ENVIANDO PARA START SCREEN ===", this.usuarioDados);
       
-      // Aproveite para avisar ao Google que alguém logou/cadastrou!
       logEvent(analytics, 'login_sucesso');
     },
-    // 1. Rastreia quando o jogo começa
+
     startGame(level) {
       this.dificuldade = level;
       this.jogoIniciado = true;
       logEvent(analytics, 'start_game', { difficulty: level });
     },
 
-    // 2. ADICIONE ESTA FUNÇÃO para rastrear o interesse pedagógico
     abrirIntro() {
       this.exibindoIntro = true;
       logEvent(analytics, 'click_conhecer_mulheres');
@@ -166,60 +213,34 @@ methods: {
     abrirRanking() {
       this.exibindoRanking = true;
       this.jogoIniciado = false;
-      logEvent(analytics, 'ver_ranking'); // Rastreia quem olha o ranking
+      logEvent(analytics, 'ver_ranking');
     },
 
-    // 3. Quando o usuário vence (recebe o evento do GameBoard)
-    // 3. Quando o usuário vence (recebe o evento do GameBoard)
     async atualizarDadosUsuario(novosDados) {
-      console.log("App.vue atualizando recordes:", novosDados.recordes);
-      this.usuarioDados = { ...novosDados }; 
+      console.log("App.vue recebendo atualização do GameBoard:", novosDados);
+      
+      // 🔧 CORREÇÃO 3: Preserva o UID caso novosDados venham sem ele
+      const uidAtual = novosDados.uid || this.usuarioDados.uid || auth.currentUser?.uid;
+
+      this.usuarioDados = {
+        ...this.usuarioDados,
+        ...novosDados,
+        uid: uidAtual
+      }; 
       
       logEvent(analytics, 'vitoria_confirmada');
-
-      // 🌟 TRAVA DO CHECKBOX AQUI: Só envia para a coleção "ranking" se o usuário aceitou!
-      if (this.usuarioDados.participarRanking === true) {
-        try {
-          // Nota: Você já deve ter uma lógica de addDoc ou setDoc importada do firebase.
-          // Certifique-se de que ela use esses campos para salvar os pontos de forma correta:
-          console.log("🚀 Enviando pontuação para o ranking público pois o checkbox está ATIVO.");
-          
-          /* 
-          A sua função que salva no Firebase (se estiver aqui dentro ou no GameBoard) 
-          deve seguir essa estrutura para respeitar o seu botão:
-          
-          await addDoc(collection(db, "ranking"), {
-            nome: this.usuarioDados.nome,
-            pontuacao: novosDados.ultimaPontuacao, // ou a variável de pontos que você usa
-            dificuldade: this.dificuldade,
-            escola: this.usuarioDados.escola,
-            codigoTurmaVinculado: this.usuarioDados.codigoTurmaVinculado,
-            nomeTurma: this.usuarioDados.nomeTurma
-          });
-          */
-
-        } catch (error) {
-          console.error("Erro ao salvar no ranking:", error);
-        }
-      } else {
-        console.log("🛑 Pontuação NÃO enviada para o ranking. O usuário escolheu não participar.");
-      }
     },
 
-   async sairDaConta() {
+    async sairDaConta() {
       await auth.signOut();
       this.usuarioLogado = false;
       
-      // Reinicializa o usuário mantendo a estrutura dos recordes intacta e zerada!
       this.usuarioDados = { 
+        uid: '',
         nome: '', 
         escola: '', 
         participarRanking: false,
-        recordes: { 
-          facil: 0, 
-          medio: 0, 
-          dificil: 0 
-   } 
+        pontuacaoMaxima: 0
       };
     }
   } 
